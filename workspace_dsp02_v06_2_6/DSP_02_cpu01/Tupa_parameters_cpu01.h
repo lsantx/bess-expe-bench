@@ -5,7 +5,7 @@
 
 // PWM DEFINITIONS
 #define PWM_FREQ                9000                             //Frequência de chaveamento
-#define Nsample                 2                           // Razão entre freq de amostragem e de chaveamento
+#define Nsample                 1                           // Razão entre freq de amostragem e de chaveamento
 #define TSAMPLE                 1.0/(Nsample*PWM_FREQ)            //Período de amorstrage
 #define N                       (Nsample*PWM_FREQ)/20             // N Usado para o cálculo da média movel
 
@@ -42,7 +42,7 @@
 #define Ir              36
 
 // Limites para proteções
-#define OVER_CURRENT_GRID_LIMIT          40
+#define OVER_CURRENT_GRID_LIMIT          30
 #define DC_OVERVOLTAGE_LIMIT             680
 #define DC_PRECHARGE_LIMIT               280
 #define DC_MANUAL_PRECHARGE_LIMIT        260

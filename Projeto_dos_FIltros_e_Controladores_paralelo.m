@@ -2,34 +2,14 @@ clear
 clc
 close all
 
-% Calculo dos parametros dos filtros e controladores:
-
-%% Coeficientes do filtro de segunda ordem (CCS)
-
-% Frequencia de amostragem:
-fsample = 18000;
-Ts = 1/fsample;
-format long
-
-fso = 1;                                                                  % frequência do filtro [Hz]
-
-Cf0 = (Ts^2)*((2*pi*fso)^2);
-Cf1 = abs(((Ts)*((2*pi*fso))*sqrt(2)) - ((Ts^2)*((2*pi*fso)^2)) - 1);
-Cf2 = 2 - (Ts*2*pi*fso*sqrt(2));
-
-fprintf('Coeficientes do Filtro de Segunda Ordem:\n\n')
-display(num2str(Cf0,'Cf0 = %.20f'));
-display(num2str(Cf1,'Cf1 = %.20f'));
-display(num2str(Cf2,'Cf2 = %.20f'));
-
 %% Coeficientes do filtro de Primeira ordem
 
 % Frequencia de amostragem:
-fsample = 18000;
+fsample = 9000;
 Ts = 1/fsample;
 format long
 
-fso = 1;                                                                  % frequência do filtro [Hz]
+fso = 2.5;                                                                  % frequência do filtro [Hz]
 
 Cf0 = Ts/(1/(2*pi*fso));
 Cf1 = Ts/(1/(2*pi*fso));
@@ -41,7 +21,7 @@ display(num2str(Cf1,'Cf1 = %.20f'));
 %% Coeficientes controlador ressonante
 clc;
 clear;
-Ts = 1/(18000);
+Ts = 1/(9000);
 wn = 2*pi*60;
 h = 11;
 
@@ -61,13 +41,32 @@ display(num2str(c2,'c2 = %.20f'));
 display(num2str(c3,'c3 = %.20f'));
 display(num2str(c4,'c4 = %.20f'));
 
+%% Parametros Filtro
+fsw = 9000;
+fn = 60;
+Lf = 1e-3;
+Cf = 25e-06;
+%Rd = 1.5;
+Lg = Lf;
+L = Lg+Lf;
+Rf = 2*pi*fn*Lf/18.8982;
+Rg = 2*pi*fn*Lg/18.8982;
+Rd = 1.8;
+R = Rg+Rf;
+
+% Controle ressonante
+Kin = 1000;%-2*pi*fc_ab*R*2;
+T=1/fsw;
+ro=exp(R*T/L);
+Kp_eq_13 = R*sqrt(2+2*ro^-2-(1+sqrt(5))*ro^-1)/((1-ro^-1)*sqrt(2))
+
 %% Projeto filtro passa baixa segunda ordem
 clc
 clear
 s = tf('s');
 zeta = 0.707;
-wn = 2*pi*2.5;
-Ts = 1/18000;
+wn = 2*pi*50;
+Ts = 1/9000;
 z = tf('z',Ts);
 
 format long
@@ -143,7 +142,7 @@ clear;
 clc;
 close all;
 
-fsw = 18000;
+fsw = 9000;
 fc = fsw/20;
 Vdc = 450;
 R = 0.55;

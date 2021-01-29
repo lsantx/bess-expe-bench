@@ -87,7 +87,7 @@ void ConfigureEPWM(void)
     EALLOW;
 
     EPwm1Regs.ETSEL.bit.SOCAEN   = 1;                  // Disable SOC on A group
-    EPwm1Regs.ETSEL.bit.SOCASEL  = ET_CTR_PRDZERO;        // These bits determine when a EPWMxSOCA pulse will be generated.
+    EPwm1Regs.ETSEL.bit.SOCASEL  = ET_CTR_PRD;        // These bits determine when a EPWMxSOCA pulse will be generated.
     EPwm1Regs.ETPS.bit.SOCAPRD  = 1;                   // Generate pulse on 1st event
     EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN;     // updown counter
     EPwm1Regs.TBPRD = 50000000/PWM_FREQ;               // Set period of PWM Fclock/(2*Fpwm)  F_clock = 100MHz

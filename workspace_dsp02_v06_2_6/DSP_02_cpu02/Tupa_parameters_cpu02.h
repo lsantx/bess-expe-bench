@@ -2,7 +2,7 @@
 #define     __TUPA_PARAMETERS_H__
 
 // PWM DEFINITIONS
-#define PWM_FREQ                18000                        //Frequência de chaveamento
+#define PWM_FREQ                9000                        //Frequência de chaveamento
 #define Nsample                 1                           // Razão entre freq de amostragem e de chaveamento
 #define TSAMPLE                 1.0/(Nsample*PWM_FREQ)      //Período de amorstrage
 
@@ -22,20 +22,20 @@
 #define Ts_div2              TSAMPLE*0.500000
 
 // Ganhos do controlador PI de corrente do conv. dc/dc no modo boost (descarga das baterias)
-#define PI_DIS_KP               0.050265
-#define PI_DIS_KI               8.339
+#define PI_DIS_KP               0.025133
+#define PI_DIS_KI               4.1695
 #define PI_DIS_OUTMAX           1
 #define PI_DIS_OUTMIN           0
 
 // Ganhos do controlador PI de corrente do conv. dc/dc no modo buck (carga das baterias)
-#define PI_ICH_KP               0.050265
-#define PI_ICH_KI               8.339
+#define PI_ICH_KP               0.025133
+#define PI_ICH_KI               4.1695
 #define PI_ICH_OUTMAX           1
 #define PI_ICH_OUTMIN           0
 
 // Ganhos do controlador PI de tensão do conv. dc/dc no modo buck (carga das baterias)
-#define PI_VCH_KP               0.1492
-#define PI_VCH_KI               0.46873
+#define PI_VCH_KP               0.46331
+#define PI_VCH_KI               29.1104
 
 // Referências máximas de corrente de descarga e carga
 #define Ir_dis                   15
