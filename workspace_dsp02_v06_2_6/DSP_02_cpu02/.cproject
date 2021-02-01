@@ -222,6 +222,8 @@
 								<option id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.FP_MODE.800987910" name="Floating Point mode (--fp_mode)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.FP_MODE" value="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.FP_MODE.relaxed" valueType="enumerated"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.INCLUDE_PATH.1853397061" name="Add dir to #include search path (--include_path, -I)" superClass="com.ti.ccstudio.buildDefinitions.C2000_18.12.compilerID.INCLUDE_PATH" valueType="includePath">
 									<listOptionValue builtIn="false" value="D:\OneDrive - ufmg.br\materiais\Doutorado\Bancada\Codigo\Inversor_Inter_codigo\include\F2837xD_headers\include"/>
+									<listOptionValue builtIn="false" value="/home/lucas/Insync/lsx@ufmg.br/OneDrive Biz/materiais/Doutorado/Bancada/Codigo/Inversor_Inter_codigo/include/F2837xD_headers/include"/>
+									<listOptionValue builtIn="false" value="/home/lucas/Insync/lsx@ufmg.br/OneDrive Biz/materiais/Doutorado/Bancada/Codigo/Inversor_Inter_codigo/include/F2837xD_common/include"/>
 									<listOptionValue builtIn="false" value="D:\OneDrive - ufmg.br\materiais\Doutorado\Bancada\Codigo\Inversor_Inter_codigo\include\F2837xD_common\include"/>
 									<listOptionValue builtIn="false" value="&quot;${CG_TOOL_ROOT}/include&quot;"/>
 								</option>
