@@ -1,3 +1,10 @@
-Code of the BESS experimental bench
+Experimental bench code of the battery energy storage system
 
-sofware: Code Composer Studio
+Rated Power = 20 kW
+
+Processor:
+
+TMDSDOCK28379D F28379D Delfino experimenter kit board
+
+https://www.ti.com/diagrams/tmdsdock28379d_6_28_16_ti_--125crop_resized.jpg
+
