@@ -22,14 +22,14 @@
 #define Ts_div2              TSAMPLE*0.500000
 
 // Ganhos do controlador PI de corrente do conv. dc/dc no modo boost (descarga das baterias)
-#define PI_DIS_KP               0.025133
-#define PI_DIS_KI               4.1695
+#define PI_DIS_KP               0.0050265
+#define PI_DIS_KI               0.8339
 #define PI_DIS_OUTMAX           1
 #define PI_DIS_OUTMIN           0
 
 // Ganhos do controlador PI de corrente do conv. dc/dc no modo buck (carga das baterias)
-#define PI_ICH_KP               0.025133
-#define PI_ICH_KI               4.1695
+#define PI_ICH_KP               0.0050265
+#define PI_ICH_KI               0.8339
 #define PI_ICH_OUTMAX           1
 #define PI_ICH_OUTMIN           0
 
