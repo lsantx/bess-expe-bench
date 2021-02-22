@@ -4,10 +4,10 @@
 
 
 // PWM DEFINITIONS
-#define PWM_FREQ                9000                             //Frequência de chaveamento
-#define Nsample                 1                           // Razão entre freq de amostragem e de chaveamento
-#define TSAMPLE                 1.0/(Nsample*PWM_FREQ)            //Período de amorstrage
-#define N                       (Nsample*PWM_FREQ)/20             // N Usado para o cálculo da média movel
+#define PWM_FREQ                9000                             //Frequï¿½ncia de chaveamento
+#define Nsample                 1                           // Razï¿½o entre freq de amostragem e de chaveamento
+#define TSAMPLE                 1.0/(Nsample*PWM_FREQ)            //Perï¿½odo de amorstrage
+#define N                       (Nsample*PWM_FREQ)/20             // N Usado para o cï¿½lculo da mï¿½dia movel
 
 //Constantes
 #define DOISPI               6.283185307179586  // 2*PI
@@ -22,16 +22,17 @@
 #define PI_PLL_GRID_OUTMAX     550
 #define PI_PLL_GRID_OUTMIN    -550
 
-// Ganhos do controlador PI do Vdc (0.5Hz)
-#define PI_Vdc_KP         0.019180928276777
-#define PI_Vdc_KI         0.034790355513840
-#define PI_Vdc_OUTMAX     50000
-#define PI_Vdc_OUTMIN    -50000
+// Ganhos do controlador PI do Vdc
+#define PI_Vdc_KP         -0.1805
+#define PI_Vdc_KI         -0.1031
+#define PI_Vdc_OUTMAX     30
+#define PI_Vdc_OUTMIN    -30
 
 // Ganhos do controlador PI do Reativo
-#define PI_Q_KI         12.5664
-#define PI_Q_OUTMAX     50000
-#define PI_Q_OUTMIN    -50000
+#define PI_Q_KP         -0.00082304
+#define PI_Q_KI         -0.0052
+#define PI_Q_OUTMAX     30
+#define PI_Q_OUTMIN    -30
 
 // Limite de tempo para pré-carga
 #define PRECHARGE_LIMIT        30/(TSAMPLE)      //6 segundos
