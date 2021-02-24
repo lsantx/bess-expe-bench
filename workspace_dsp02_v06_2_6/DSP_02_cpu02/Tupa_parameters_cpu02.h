@@ -35,10 +35,10 @@
 
 // Ganhos do controlador PI de tensão do conv. dc/dc no modo buck (carga das baterias)
 #define PI_VCH_KP               0.46331
-#define PI_VCH_KI               29.1104
+#define PI_VCH_KI               291.1038
 
 // Referências máximas de corrente de descarga e carga
-#define Ir_dis                   15
+#define Ir_dis                   16
 #define Ir_ch                    7
 
 // Limites para proteções

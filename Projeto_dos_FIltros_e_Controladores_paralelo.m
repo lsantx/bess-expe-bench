@@ -143,8 +143,8 @@ clc;
 close all;
 
 fsw = 9000;
-fc = fsw/20;
-Vdc = 450;
+fc = fsw/90;
+Vdc = 500;
 R = 0.55;
 L = 4e-3;
 Nbseries = 16;
@@ -180,7 +180,7 @@ disp({'KI =',num2str(KI)});
 
 %COntrole da tensão nas baterias
 Ke = Rint;
-fc2 = 0.5;            %%freq do polo
+fc2 = 5;              %%freq do polo
 fc1 = fc2*20;         %%freq do zero
 
 KP = 2*pi*fc2/(2*pi*Ke*(fc1-fc2));
