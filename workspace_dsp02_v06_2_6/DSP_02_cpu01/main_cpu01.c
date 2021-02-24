@@ -180,6 +180,7 @@ double c4;
 #define  FILTER2ND_DEFAULTS_5Hz {0,0,0,0,0,0,0.00000303866583164036,0.00000607733166328071,0.00000303866583164036,-1.99506422020287144115,0.99507637486619804346}   //5Hz
 #define  FILTER2ND_DEFAULTS_10Hz {0,0,0,0,0,0,0.00001212470404899192,0.00002424940809798384,0.00001212470404899192,-1.99012852279409080403,0.99017702161028686714}   //10Hz
 sFilter2nd fil2nQ   = FILTER2ND_DEFAULTS_10Hz;
+sFilter2nd fil2nP   = FILTER2ND_DEFAULTS_10Hz;
 
 //Flags
 typedef struct{
@@ -194,10 +195,11 @@ typedef struct{
     unsigned int precharge_fail;
     unsigned int manual_pre_charge;
     unsigned int Com_DSP2_read;
+    unsigned int data_logo_init;
 
 }sFlags;
 
-#define FLAGS_DEFAULTS {0,0,0,0,0,0,1,0,0,0,0}
+#define FLAGS_DEFAULTS {0,0,0,0,0,0,1,0,0,0,0,0}
 sFlags flag = FLAGS_DEFAULTS;
 
 //Ressonante
@@ -284,9 +286,10 @@ typedef struct{
     Uint32 count6;
     Uint32 count7;
     Uint32 count8;
+    Uint32 count9;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //Váriaveis para enviar dados do CPU1 para o CPU2
@@ -340,6 +343,10 @@ float32 AdcResults[RESULTS_BUFFER_SIZE];
 float32 AdcResults2[RESULTS_BUFFER_SIZE];
 float32 AdcResults3[RESULTS_BUFFER_SIZE];
 
+//Buffers para armazenamento de dados
+float aqui_sign1[N_data_log];
+float aqui_sign2[N_data_log];
+
 //Variaveis de comunicação entre o CPUs
 int send = 0;
 
@@ -351,10 +358,12 @@ float  Iref = 0;                                  //Referência de corrente (sem 
 float  Vdc_ref = 480;                             //Tensão de referência da tensão do dc-link;
 float  Q_ref   = 0;                               //Referência de potência reativa;
 float  Qm      = 0;                               //potência reativa medida
+float  Pm      = 0;                               //potência ativa medida
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
 Uint32 resultsIndex = 0;
+Uint32 resultsIndex2 = 0;
 //Variaveis para ajuste do offset
 Uint32 first_scan = 1;
 Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0; Uint32 sum_CH4 = 0; Uint32 sum_CH5 = 0; Uint32 sum_CH6 = 0;
@@ -500,6 +509,15 @@ void main(void)
     }
 
     resultsIndex = 0;
+
+    // Inicializa os buffers de aquisição de sinal
+     for(resultsIndex2 = 0; resultsIndex2 < N_data_log; resultsIndex2++)
+     {
+         aqui_sign1[resultsIndex2] = 0;
+         aqui_sign2[resultsIndex2] = 0;
+     }
+
+     resultsIndex2 = 0;
 
 //Seta a variavel para ajuste do offset
 inv_nro_muestras = 1.0/N_amostras;
@@ -730,6 +748,21 @@ interrupt void adcb1_isr(void)
        TUPA_First_order_signals_filter(&Filt_freq_Vdc);          //filtra a tensão Vdc com o filtro de segunda ordem
        entradas_red.Vdc = Filt_freq_Vdc.Yn;
 
+       /////////////////////////////////Aquisição dos sinais//////////////////////////////////////////////////////
+
+       if(flag.data_logo_init == 1)
+         {
+             Counts.count9++;
+             if(Counts.count9 >= COUNT_LIM_LOG)
+             {
+                 resultsIndex2++;
+                 Counts.count9 = 0;
+
+                 aqui_sign1[resultsIndex2] = fil2nP.y;
+                 aqui_sign2[resultsIndex2] = fil2nQ.y;
+             }
+         }
+
        ///////////////////////////////////////////////////////Inicio do Controle/////////////////////////////////////////////////////////////
 
        ////////////////////////////////DSOGI-PLL///////////////////////////////
@@ -789,11 +822,15 @@ interrupt void adcb1_isr(void)
        TUPA_Pifunc(&pi_Vdc);                                   // Controle PI
 
        ////////////////////////////////Controle do Reativo (malha externa)///////////////////////////////
+       //Medição pot ativa Injetada
+       Pm = 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.alfa + 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.beta;
        //Medição pot reativa Injetada
        Qm = 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.alfa - 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.beta;
 
+       fil2nP.x = Pm;
        fil2nQ.x = Qm;
        TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
+       TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisição por enquanto
 
        //Limita a referência de reativo
        if(Q_ref>5000) Q_ref = 5000;

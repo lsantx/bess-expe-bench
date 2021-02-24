@@ -15,7 +15,7 @@
 
 // Tamanho do Buffer de aquisição de dados e limite de contagem
 #define N_data_log  600               // Aquisição de 5h
-#define COUNT_LIM_LOG  540000         //Aquisição a cada 30s
+#define COUNT_LIM_LOG  270000         //Aquisição a cada 30s
 
 //Constantes
 #define DOISPI               6.283185307179586  // 2*PI
@@ -45,7 +45,7 @@
 #define OVER_CURRENT_DC_LIMIT_DISCHARGE      25
 #define OVER_CURRENT_DC_LIMIT_CHARGE         9
 #define DC_OVERVOLTAGE_LIMIT                 650
-#define BAT_OVERVOLTAGE_LIMIT                18*Nbat_series
+#define BAT_OVERVOLTAGE_LIMIT                16*Nbat_series
 #define BAT_UNDERVOLTAGE_LIMIT               9*Nbat_series
 
 // Definição das faltas

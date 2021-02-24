@@ -16,6 +16,11 @@
 // Tamanho do Buffer de aquisição de dados
 #define RESULTS_BUFFER_SIZE  2*(Nsample*PWM_FREQ/60)        //Ciclos*(Freq. de amostragem)/(freq.fundamental)
 
+// Tamanho do Buffer de aquisição de dados e limite de contagem
+#define N_data_log  600               // Aquisição de 5h
+//#define COUNT_LIM_LOG  270000         //Aquisição a cada 30s
+#define COUNT_LIM_LOG  4500           //Aquisição a cada 0.5s
+
 // Ganhos do controlador PI da PLL
 #define PI_PLL_GRID_KP         177
 #define PI_PLL_GRID_KI         15791
