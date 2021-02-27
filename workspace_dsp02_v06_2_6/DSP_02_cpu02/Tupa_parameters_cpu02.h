@@ -45,7 +45,7 @@
 #define OVER_CURRENT_DC_LIMIT_DISCHARGE      25
 #define OVER_CURRENT_DC_LIMIT_CHARGE         9
 #define DC_OVERVOLTAGE_LIMIT                 650
-#define BAT_OVERVOLTAGE_LIMIT                16*Nbat_series
+#define BAT_OVERVOLTAGE_LIMIT                18*Nbat_series
 #define BAT_UNDERVOLTAGE_LIMIT               9*Nbat_series
 
 // Definição das faltas

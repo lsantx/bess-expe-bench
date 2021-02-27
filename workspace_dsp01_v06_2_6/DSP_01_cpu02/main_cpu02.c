@@ -212,7 +212,7 @@ float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
 float I_dis_ref   =  5;                         //Referência da corrente de descarga (modo Boost)
 float I_ch_ref    =  5;                         //Referência da corrente de carga (modo Buck)
-float Vboost      =  14.4;                      //Tensão de Boost
+float Vboost      =  13.6;                      //Tensão de Boost
 float Vfloat      =  13.6;                      //Tensão de Float
 float Vref        =  0;                         //Referência da tensão de carga
 
