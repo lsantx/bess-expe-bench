@@ -583,7 +583,7 @@ interrupt void adca1_isr(void)
 
 
            //Medição 1 da Tensão do banco de baterias
-           entradas_dc.Vb1 = 0.4049*AdccResultRegs.ADCRESULT1 - gn;
+           entradas_dc.Vb1 = 0.4049*AdccResultRegs.ADCRESULT1 - 934.0;
            fil2nVbat.x = entradas_dc.Vb1;
            TUPA_Second_order_filter(&fil2nVbat);          //filtra a tensão da bateria
 
