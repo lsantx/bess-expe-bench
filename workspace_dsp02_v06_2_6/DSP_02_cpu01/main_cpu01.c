@@ -397,6 +397,16 @@ void main(void)
 //
     InitGpio(); // Skipped for this example
 
+// init the pins for the SCI-A port.
+//  GPIO_SetupPinMux() - Sets the GPxMUX1/2 and GPyMUX1/2 register bits
+//  GPIO_SetupPinOptions() - Sets the direction and configuration of the GPIOS
+// These functions are found in the F2837xD_Gpio.c file.
+//
+   GPIO_SetupPinMux(28, GPIO_MUX_CPU1, 1);
+   GPIO_SetupPinOptions(28, GPIO_INPUT, GPIO_PUSHPULL);
+   GPIO_SetupPinMux(29, GPIO_MUX_CPU1, 1);
+   GPIO_SetupPinOptions(29, GPIO_OUTPUT, GPIO_ASYNC);
+
 //
 // Step 3. Clear all interrupts and initialize PIE vector table:
 // Disable CPU interrupts
@@ -445,7 +455,7 @@ void main(void)
 // Enable global Interrupts and higher priority real-time debug events:
 //
     IER |= M_INT1; //Enable the interrupt table row. corresponding to ADC_B, page 79 of the workshop material
-
+    IER |= M_INT9; //Enable the interrupt table row 9, CORRESPONDING TO scia TX and RX.
     EDIS;
 
 // Configure GPIOs
