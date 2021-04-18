@@ -11,8 +11,8 @@
 #include "Peripheral_Interruption_Setup_cpu01.h"
 #include "Tupa_parameters_cpu01.h"
 
-//////////////////////////////////////////////////////// Estruturas //////////////////////////////////////////////////////////
-//Sinais da rede e do dc-link
+//////////////////////////////////////////////////////// Strutures //////////////////////////////////////////////////////////
+// Dc-link and grid signals
 typedef struct{
     float Vab;
     float Vbc;
@@ -91,7 +91,7 @@ typedef struct {
 sSOGI SOG = SOGI_DEFAULTS;
 sSOGI SOGB = SOGI_DEFAULTS;
 
-//Controlador PI
+//PI Controller
 typedef struct {
     int enab;
     float feedback;
@@ -147,7 +147,7 @@ typedef struct{
 #define PWM_DEFAULTS {0,0,0}
 sSvm sv_grid = PWM_DEFAULTS;
 
-//Filtro de primeira ordem
+//Firs order LPF
 typedef struct {
     float Un;
     float Un_1;
@@ -245,7 +245,7 @@ sPR PR_Ib_7 = PR_I_7_DEFAULTS;
 sPR PR_Ia_11 = PR_I_11_DEFAULTS;
 sPR PR_Ib_11 = PR_I_11_DEFAULTS;
 
-//Rampa
+//Ramp
 typedef struct{
 int   enab;
 float final;
@@ -276,7 +276,7 @@ typedef struct{
 #define CHANNEL_DEFAULTS {0,0,0,0,0,0}
 sChannel_adc channel_offset = CHANNEL_DEFAULTS;
 
-//Contadores
+//Counters
 typedef struct{
     Uint32 count1;
     Uint32 count2;
@@ -292,7 +292,7 @@ typedef struct{
 #define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
-//Váriaveis para enviar dados do CPU1 para o CPU2
+//Variables to send data from CPU1 to CPU2
 typedef struct{
     unsigned int send0;
     float send1;
@@ -301,7 +301,7 @@ typedef struct{
 #define SEND_DEFAULTS {0,0}
 SsendCPU1toCPU2 Send = SEND_DEFAULTS;
 
-//Váriaveis para receber dados do CPU1 para o CPU2
+//Variables to receive data from CPU1 to CPU2
 typedef struct{
     unsigned int *recv0;
     float *recv1;
@@ -310,7 +310,7 @@ typedef struct{
 #define RECV_DEFAULTS {0,0}
 SrecvCPU2toCPU1 Recv = RECV_DEFAULTS;
 
-///////////////////////////////////////////// Funções ////////////////////////////////////////
+///////////////////////////////////////////// Functions ////////////////////////////////////////
 // Control
 void TUPA_abc2alfabeta(sABC *, sAlfaBeta *);
 void TUPA_alfabeta2dq(sAlfaBeta*, sDQ* );
@@ -330,13 +330,13 @@ void TUPA_Second_order_filter(sFilter2nd *);
 
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
-//Variavel para ajuste do offset
+//Variable for offset adjustment
 float inv_nro_muestras = 0;
 
-//Váriavel de teste
+//Test variable
 float  gn = 762;
 
-//#pragma DATA_SECTION(gn,"SHARERAMGS1");         // Coloca a variávei que será compartilhada com o CPU02 no seguinte segmento de memória
+//#pragma DATA_SECTION(gn,"SHARERAMGS1");         // Place the variable that will be shared with CPU02 in the following memory segment
 
 //Buffers para plot
 float32 AdcResults[RESULTS_BUFFER_SIZE];
@@ -347,27 +347,37 @@ float32 AdcResults3[RESULTS_BUFFER_SIZE];
 float aqui_sign1[N_data_log];
 float aqui_sign2[N_data_log];
 
-//Variaveis de comunicação entre o CPUs
+//CPU comunication variables
 int send = 0;
 
-// Váriáveis de Controle
+// Control Variables
 float Ts = TSAMPLE;
 float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
-float  Iref = 0;                                  //Referência de corrente (sem malha externa)
-float  Vdc_ref = 480;                             //Tensão de referência da tensão do dc-link;
-float  Q_ref   = 0;                               //Referência de potência reativa;
-float  Qm      = 0;                               //potência reativa medida
-float  Pm      = 0;                               //potência ativa medida
+float  Iref = 0;
+float  Vdc_ref = 480;
+float  Q_ref   = 0;
+float  Qm      = 0;
+float  Pm      = 0;
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
 Uint32 resultsIndex = 0;
 Uint32 resultsIndex2 = 0;
-//Variaveis para ajuste do offset
+//Variables for offset adjustment
 Uint32 first_scan = 1;
 Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0; Uint32 sum_CH4 = 0; Uint32 sum_CH5 = 0; Uint32 sum_CH6 = 0;
 Uint32 N_amostras = 60000;
+
+// SCI parameters
+Uint16 sdataA[2];    // Send data for SCI-A
+Uint16 rdataA[2];    // Received data for SCI-A
+Uint16 rdata_pointA; // Used for checking the received data
+Uint16 P = 0;
+Uint16 Q = 0;
+Uint16 Soc;
+Uint16 count = 0;
+Uint16 i = 0;
 
 //Main
 void main(void)
@@ -425,20 +435,25 @@ void main(void)
     EALLOW;
 
     PieVectTable.ADCB1_INT = &adcb1_isr;  //function for ADCB interrupt 1
-    PieVectTable.IPC1_INT = &IPC1_INT; //função da interrupção do IPC para comunicação das CPus
-    PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //Interrupção ADC_B. Habilita a coluna 2 das interrupções, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER1.bit.INTx14 = 1;      //interrupção IPC1 de inter comunicação entre os CPUS. Habilita a coluna 14 correspondente
+    PieVectTable.IPC1_INT = &IPC1_INT; //function of the interruption of the IPC for communication of CPus
+    PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption (Transmitter)
+    PieVectTable.SCIA_TX_INT = &sciaTxFifoIsr;  // SCI Rx interruption (Reciever)
+    PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
+    PieCtrlRegs.PIEIER1.bit.INTx14 = 1;      //IPC1 interruption of intercommunication between CPUs. Enables the corresponding column 14
+    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;    //Enable coloum 1 of the interruption table
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
-    IER |= M_INT1; //Habilita a linha da tabela de interrupção. correspondente ao ADC_B, pg 79 do material do workshop
+    IER |= M_INT1; //Enable the interrupt table row. corresponding to ADC_B, page 79 of the workshop material
 
     EDIS;
 
 // Configure GPIOs
     GPIO_Configure();
 
-//
+// Configure Init SCI-A - fifo
+    scia_fifo_init();
+
 // Configure the ADC and power it up
 //
     ConfigureADC();
@@ -459,31 +474,31 @@ void main(void)
     CpuSysRegs.PCLKCR0.bit.GTBCLKSYNC = 1;        // Turn on the Global clock
     EDIS;
 
-//Transfere o Controle dos periféricos ADC e EPWM para o núcleo 2
+//Transfer the Control of ADC and EPWM peripherals to core 2
     EALLOW;
     DevCfgRegs.CPUSEL0.bit.EPWM6 = 1;                   // Transfer ownership of EPWM6 to CPU2
     DevCfgRegs.CPUSEL0.bit.EPWM9 = 1;                   // Transfer ownership of EPWM9 to CPU2
     DevCfgRegs.CPUSEL0.bit.EPWM10 = 1;                   // Transfer ownership of EPWM10 to CPU2
     DevCfgRegs.CPUSEL11.bit.ADC_A = 1;                  // Transfer ownership of ADC_A to CPU2
     DevCfgRegs.CPUSEL11.bit.ADC_C = 1;                  // Transfer ownership of ADC_C to CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS8 = 1;                //Configura o Bloco GS8 da memória RAM para o CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS9 = 1;                //Configura o Bloco GS9 da memória RAM para o CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS10= 1;                //Configura o Bloco GS10 da memória RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS8 = 1;                //Configura o Bloco GS8 da memï¿½ria RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS9 = 1;                //Configura o Bloco GS9 da memï¿½ria RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS10= 1;                //Configura o Bloco GS10 da memï¿½ria RAM para o CPU2
     EDIS;
 
     //
-    //Habilita o CPU02 Carregar e Aguarda o seu carregamento carregamento através do loop finito
-    ////Lembrete. Os IPCs que disparam interrupção são o 0,1,2 e 3. Os outros não tem interrupção e podem ser usados como flags
+    // Enables CPU02 to load and wait for its loading loading through the finite loop
+    ////Reminder. The CPIs that trigger interruption are 0,1,2 and 3. The others have no interruption and can be used as flags
     //
-    while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //Loop finito para aguardar o carregamento do CPU02 da DSP01 (Através da saída do encoder GPIO26)
-    IpcRegs.IPCSET.bit.IPC5 = 1;                             //Seta o bit IPC5 para iniciar o carregamento do CPU02 carregar
-    while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //Loop finito para aguardar o carregamento do CPU02 da DSP02
-    IpcRegs.IPCACK.bit.IPC4 = 1;                             //Limpa a flag do IPC4
+    // while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
+    IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
+    while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
+    IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag
 
-    // Habilita as GPIOs como ePwm
+    // Enables ePwm GPIOs
     InitEPwmGpio();
 
-    // Ativa o Tipzone dos PWM e desabilita os pulsos até o comando da flag.GSC_PulsesOn for habilitado
+    // Activate the PWM Tipzone and disables the pulses until the flag.GSC_PulsesOn command is enabled
     EALLOW;
     EPwm1Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM1
     EPwm1Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
@@ -496,7 +511,7 @@ void main(void)
     EPwm5Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
     EDIS;
 
-    //Habilita as Interrupções. A partir desse ponto as interrupções são chamadas quando requisitadas
+    //Enables Interrupts. From that point, interruptions are called when requested
     EINT;  // Enable Global interrupt INTM
     ERTM;  // Enable Global realtime interrupt DBGM
 
@@ -510,7 +525,7 @@ void main(void)
 
     resultsIndex = 0;
 
-    // Inicializa os buffers de aquisição de sinal
+    // Initialize signal acquisition buffers
      for(resultsIndex2 = 0; resultsIndex2 < N_data_log; resultsIndex2++)
      {
          aqui_sign1[resultsIndex2] = 0;
@@ -519,28 +534,36 @@ void main(void)
 
      resultsIndex2 = 0;
 
-//Seta a variavel para ajuste do offset
+ // Init send data.  After each transmission this data
+ // will be updated for the next transmission
+ //
+    for(i = 0; i<2; i++)
+    {
+       sdataA[i] = i;
+    }
+
+//Variable arrow for offset adjustment
 inv_nro_muestras = 1.0/N_amostras;
 
-//Habilita o controlador PI da PLL
+//Enables the PLL PI controller
 pll_grid.PI_pll.enab = 1;
 
-//Loop infinito
+//Infinite Loop
  while(1)
 {
 
-        //Carrega a flag relacionada com a entrada digital responsável por verificar se a flag Shutdown_Conv do conjunto 1 foi acionada
-        flag.Com_DSP2_read = GpioDataRegs.GPADAT.bit.GPIO24;    //Estado do contator de conexão com a rede
+        //Loads the flag related to the digital input responsible for checking if the Shutdown_Conv flag of set 1 has been triggered
+        flag.Com_DSP2_read = GpioDataRegs.GPADAT.bit.GPIO24;    //Grid connection contactor status
 
         //
         // These functions are in the F2837xD_EPwm.c file
         //
         if(flag.GSC_PulsesOn == 1 && flag.precharge_ok == 1 && flag.Inv_on == 1)
         {
-           //Habilita o controlador da tensão do dc-link e do reativo
+           //Enable the dc-link and reactive voltage controller
            pi_Vdc.enab = 1;
            pi_Q.enab   = 1;
-           // Controladores de corrente do inversor habilitados
+           // Enable Inverter current controllers
            PR_Ia_fund.enab = 1;
            PR_Ia_5.enab = 1;
            PR_Ia_7.enab = 1;
@@ -549,11 +572,11 @@ pll_grid.PI_pll.enab = 1;
            PR_Ib_5.enab = 1;
            PR_Ib_7.enab = 1;
            PR_Ib_11.enab = 1;
-           //Habilita as rampas
-           VRamp.enab = 1;           //rampa da tensão do dc-link
-           QRamp.enab = 1;           //rampa da tensão do reativo
+           //Enable Ramps
+           VRamp.enab = 1;
+           QRamp.enab = 1;
 
-           // Desativa o Tipzone dos PWM e habilita os pulsos
+           // Disable PWM Tipzone and enables pulses
            EALLOW;                // Enable EALLOW protected register access
            EPwm1Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM1
            EPwm1Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
@@ -569,10 +592,10 @@ pll_grid.PI_pll.enab = 1;
         }
         else
         {
-           //Desabilita o controlador da tensão do dc-link e reativo
+           //Disable dc-link and reactive voltage controller
            pi_Vdc.enab = 0;
            pi_Q.enab   = 0;
-           // Controladores de corrente do inversor desabilitados
+           // Disable inverter current controllers
            PR_Ia_fund.enab = 0;
            PR_Ib_fund.enab = 0;
            PR_Ia_5.enab = 0;
@@ -581,11 +604,11 @@ pll_grid.PI_pll.enab = 1;
            PR_Ib_5.enab = 0;
            PR_Ib_7.enab = 0;
            PR_Ib_11.enab = 0;
-           //Desaabilita as rampas
-           VRamp.enab = 0;           //rampa da tensão do dc-link
-           QRamp.enab = 0;           //rampa da tensão do reativo
+           //Disable ramps
+           VRamp.enab = 0;
+           QRamp.enab = 0;
 
-           // Ativa o Tipzone dos PWM e desabilita os pulsos
+           // Enable PWM Tipzone and disables pulses
            EALLOW;
            EPwm1Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM1
            EPwm1Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
@@ -601,7 +624,7 @@ pll_grid.PI_pll.enab = 1;
         }
 
 
-        // Seleção das variáveis que serão plotadas no gráfico do Gui Composer
+        // Variables that will be plotted on the Gui Composer chart
         if(flag.real_time_buff == 1)
         {
            switch(selecao_plot)
@@ -650,12 +673,13 @@ pll_grid.PI_pll.enab = 1;
         //flag
         //
 
-        GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;            // GPIO para verificar a freq de amostragem
+        // GPIO to check the sampling frequency
+        GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
 
 }
 }
 
-//Interrupção do IPC1 para comunicação com a CPU02
+// Interruption of IPC1 for communication with CPU02
 interrupt void IPC1_INT(void)
 {
     Recv.recv0 = IpcRegs.IPCRECVADDR;
@@ -668,19 +692,19 @@ interrupt void adcb1_isr(void)
 {
     GpioDataRegs.GPBSET.bit.GPIO62 = 1;                            // GPIO para verificar a freq de amostragem
 
-    // Função de Proteção
+    // Funï¿½ï¿½o de Proteï¿½ï¿½o
     TUPA_protect();
 
-    // Função de parada de funcionamento do sistema
+    // Funï¿½ï¿½o de parada de funcionamento do sistema
     TUPA_StopSequence();
 
-    // Função de início de funcionamento do sistema
+    // Funï¿½ï¿½o de inï¿½cio de funcionamento do sistema
     TUPA_StartSequence();
 
-    //Variável compartinlhada entre os núcleos
+    //Variï¿½vel compartinlhada entre os nï¿½cleos
     Send.send0 = flag.Shutdown;
 
-    //Envia a váriaveis para o npucleo 2
+    //Envia a vï¿½riaveis para o npucleo 2
     IpcRegs.IPCSENDADDR = (Uint32) &Send.send0;
     IpcRegs.IPCSET.bit.IPC2 = 1;
 
@@ -689,7 +713,7 @@ interrupt void adcb1_isr(void)
     //else EPwm1Regs.ETSEL.bit.SOCASEL = 2;
 
     AdcbRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;  //ADC Interrupt 1 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Limpa a flag da interrupção da correspondente linha. Se não fazer isso, uma nova interrupção não é possível pq essa flag não é limpa
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Limpa a flag da interrupï¿½ï¿½o da correspondente linha. Se nï¿½o fazer isso, uma nova interrupï¿½ï¿½o nï¿½o ï¿½ possï¿½vel pq essa flag nï¿½o ï¿½ limpa
 
     //Piscar o LED 2 em uma determinada frequecia
     Counts.count7 ++;
@@ -701,8 +725,8 @@ interrupt void adcb1_isr(void)
         Counts.count7 = 0;
     }
 
-    // Update the buffers with the ADCResults. Se flag.real_time_buff for igual a 1, os buffers são atualizados a cada período de amostragem
-    // Caso contrário, os buffers param de ser atualizados e os dados da memória podem ser exportados
+    // Update the buffers with the ADCResults. Se flag.real_time_buff for igual a 1, os buffers sï¿½o atualizados a cada perï¿½odo de amostragem
+    // Caso contrï¿½rio, os buffers param de ser atualizados e os dados da memï¿½ria podem ser exportados
 
     if(flag.real_time_buff == 1)
     {
@@ -713,13 +737,13 @@ interrupt void adcb1_isr(void)
        }
     }
 
-    /* Saída para o DAC
+    /* Saï¿½da para o DAC
     EALLOW;
     DacaRegs.DACVALS.bit.DACVALS = (uint16_t) (1500 * (1 + __cos(376.99111*t)));
     EDIS;
     */
 
-    //Verifica o offset das medições
+    //Verifica o offset das mediï¿½ï¿½es
     if(first_scan == 1)
     {
        Offset_Calculation();
@@ -727,12 +751,12 @@ interrupt void adcb1_isr(void)
     else
     {
        ////////////////////////////////////////// Leitura dos sensores////////////////////////////////////////////////////////////////q
-       // Tensões de Linha
+       // Tensï¿½es de Linha
        entradas_red.Vca = 0.251556520094124*AdcdResultRegs.ADCRESULT0 - 0.251556520094124*channel_offset.CH_1;
        entradas_red.Vbc = 0.252383078685275*AdcdResultRegs.ADCRESULT1 - 0.252383078685275*channel_offset.CH_2;
        entradas_red.Vab = 0.252185841566323*AdcdResultRegs.ADCRESULT2 - 0.252185841566323*channel_offset.CH_3;
 
-       // Estimação das tensões de fase
+       // Estimaï¿½ï¿½o das tensï¿½es de fase
        entradas_red.Va = (entradas_red.Vab - entradas_red.Vca)*0.333333333333333;
        entradas_red.Vb = (entradas_red.Vbc - entradas_red.Vab)*0.333333333333333;
        entradas_red.Vc = (entradas_red.Vca - entradas_red.Vbc)*0.333333333333333;
@@ -743,12 +767,12 @@ interrupt void adcb1_isr(void)
        entradas_red.Ib = -(0.014542328746540*AdcbResultRegs.ADCRESULT1 - 0.014542328746540*channel_offset.CH_5);
        entradas_red.Ic = -(0.014663669894163*AdcbResultRegs.ADCRESULT2 - 0.014663669894163*channel_offset.CH_6);
 
-       //Tensão do dc-link
+       //Tensï¿½o do dc-link
        Filt_freq_Vdc.Un = 0.3235*AdcdResultRegs.ADCRESULT3 - gn;
-       TUPA_First_order_signals_filter(&Filt_freq_Vdc);          //filtra a tensão Vdc com o filtro de segunda ordem
+       TUPA_First_order_signals_filter(&Filt_freq_Vdc);          //filtra a tensï¿½o Vdc com o filtro de segunda ordem
        entradas_red.Vdc = Filt_freq_Vdc.Yn;
 
-       /////////////////////////////////Aquisição dos sinais//////////////////////////////////////////////////////
+       /////////////////////////////////Aquisiï¿½ï¿½o dos sinais//////////////////////////////////////////////////////
 
        if(flag.data_logo_init == 1)
          {
@@ -770,7 +794,7 @@ interrupt void adcb1_isr(void)
        Vabc.a = entradas_red.Va;
        Vabc.b = entradas_red.Vb;
        Vabc.c = entradas_red.Vc;
-       TUPA_abc2alfabeta(&Vabc,&Valfabeta);            // transformada abc para alfa beta da tensão da rede
+       TUPA_abc2alfabeta(&Vabc,&Valfabeta);            // transformada abc para alfa beta da tensï¿½o da rede
 
        //DSOGI
        SOG.Vm = Valfabeta.alfa;
@@ -778,12 +802,12 @@ interrupt void adcb1_isr(void)
        if (Counts.count2 < 36000)
        {
            Counts.count2 += 1;
-           Filt_freq_pll.Un = 60;                                             // Inicia a frequência de ressonância do SOG em 60Hz e, depois de um certo tempo, a freq da pll entra (adaptativo)
+           Filt_freq_pll.Un = 60;                                             // Inicia a frequï¿½ncia de ressonï¿½ncia do SOG em 60Hz e, depois de um certo tempo, a freq da pll entra (adaptativo)
        }
        else
        {
-            Filt_freq_pll.Un = pll_grid.freq;                                 // Freq de ressonância do SOG = Freq da PLL
-            //Filt_freq_pll.Un = 60;                                 // Freq de ressonância do SOG = Freq da PLL
+            Filt_freq_pll.Un = pll_grid.freq;                                 // Freq de ressonï¿½ncia do SOG = Freq da PLL
+            //Filt_freq_pll.Un = 60;                                 // Freq de ressonï¿½ncia do SOG = Freq da PLL
        }
 
        TUPA_First_order_signals_filter(&Filt_freq_pll);                    //filtra a frequencia da PLL
@@ -798,7 +822,7 @@ interrupt void adcb1_isr(void)
        pll_grid.beta = (SOG.V_sogi_q + SOGB.V_sogi)*0.5;
        TUPA_SRFPLL(&pll_grid);
 
-       // Elimina qualquer vestígio da seq zero e realiza a transformada abc para alfa-beta da corrente medida do inversor
+       // Elimina qualquer vestï¿½gio da seq zero e realiza a transformada abc para alfa-beta da corrente medida do inversor
        entradas_red.Io = __divf32((entradas_red.Ia+entradas_red.Ib+entradas_red.Ic),3);
        Iabc.a = entradas_red.Ia - entradas_red.Io;
        Iabc.b = entradas_red.Ib - entradas_red.Io;
@@ -806,15 +830,15 @@ interrupt void adcb1_isr(void)
 
        TUPA_abc2alfabeta(&Iabc,&Ialfabeta);            // transformada abc para alfa-beta da corrente do inversor
 
-       ////////////////////////////////Controle da tensão do dc-link (malha externa)///////////////////////////////
-       //Limita a referência de tensão
+       ////////////////////////////////Controle da tensï¿½o do dc-link (malha externa)///////////////////////////////
+       //Limita a referï¿½ncia de tensï¿½o
        if(Vdc_ref>580) Vdc_ref = 580;
 
-       //rampa da referência do Vdc
+       //rampa da referï¿½ncia do Vdc
        VRamp.final = Vdc_ref;
        VRamp.in = entradas_red.Vdc;
 
-       TUPA_Ramp(&VRamp);                                      //Rampa de referência de tensão para o dc-link
+       TUPA_Ramp(&VRamp);                                      //Rampa de referï¿½ncia de tensï¿½o para o dc-link
 
        //controle PI
        pi_Vdc.setpoint = VRamp.atual*VRamp.atual;
@@ -822,24 +846,24 @@ interrupt void adcb1_isr(void)
        TUPA_Pifunc(&pi_Vdc);                                   // Controle PI
 
        ////////////////////////////////Controle do Reativo (malha externa)///////////////////////////////
-       //Medição pot ativa Injetada
+       //Mediï¿½ï¿½o pot ativa Injetada
        Pm = 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.alfa + 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.beta;
-       //Medição pot reativa Injetada
+       //Mediï¿½ï¿½o pot reativa Injetada
        Qm = 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.alfa - 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.beta;
 
        fil2nP.x = Pm;
        fil2nQ.x = Qm;
        TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
-       TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisição por enquanto
+       TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisiï¿½ï¿½o por enquanto
 
-       //Limita a referência de reativo
+       //Limita a referï¿½ncia de reativo
        if(Q_ref>5000) Q_ref = 5000;
 
-       //rampa de variação da referência de reativo
+       //rampa de variaï¿½ï¿½o da referï¿½ncia de reativo
        QRamp.final = Q_ref;
        QRamp.in    = fil2nQ.y;
 
-       TUPA_Ramp(&QRamp);                      //Rampa de referência da potência reativa
+       TUPA_Ramp(&QRamp);                      //Rampa de referï¿½ncia da potï¿½ncia reativa
 
        // Controle
        pi_Q.setpoint = QRamp.atual;
@@ -853,11 +877,11 @@ interrupt void adcb1_isr(void)
        //PR_Ia_fund.setpoint = Iref*pll_grid.costh;
        //PR_Ib_fund.setpoint = Iref*pll_grid.sinth;
 
-       // Sepoint do controle de corrente - Teoria da potência instantânea
+       // Sepoint do controle de corrente - Teoria da potï¿½ncia instantï¿½nea
        PR_Ia_fund.setpoint = __divf32((pll_grid.alfa*(-pi_Vdc.output) + pi_Q.output*pll_grid.beta),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
        PR_Ib_fund.setpoint = __divf32((pll_grid.beta*(-pi_Vdc.output) - pi_Q.output*pll_grid.alfa),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
 
-       // saturação da corrente
+       // saturaï¿½ï¿½o da corrente
        if(PR_Ia_fund.setpoint>Ir)  PR_Ia_fund.setpoint =  Ir;
        if(PR_Ia_fund.setpoint<-Ir) PR_Ia_fund.setpoint = -Ir;
        if(PR_Ib_fund.setpoint>Ir)  PR_Ib_fund.setpoint =  Ir;
@@ -880,7 +904,7 @@ interrupt void adcb1_isr(void)
        PR_Ib_7.feedback = PR_Ib_fund.feedback;
        PR_Ib_11.feedback = PR_Ib_fund.feedback;
 
-       // Funções dos controladores ressonantes
+       // Funï¿½ï¿½es dos controladores ressonantes
        TUPA_PR(&PR_Ia_fund);
        TUPA_PR(&PR_Ia_5);
        TUPA_PR(&PR_Ia_7);
@@ -890,11 +914,11 @@ interrupt void adcb1_isr(void)
        TUPA_PR(&PR_Ib_7);
        TUPA_PR(&PR_Ib_11);
 
-       //Saída dos controladores ressonantes
+       //Saï¿½da dos controladores ressonantes
        Valfabeta_pwm.alfa = PR_Ia_fund.output + PR_Ia_5.output + PR_Ia_7.output + pll_grid.alfa;
        Valfabeta_pwm.beta = PR_Ib_fund.output + PR_Ib_5.output + PR_Ib_7.output + pll_grid.beta;
 
-       ////Comente as duas linhas anteriores e descomente as duas linhas seguintes para teste de malha aberta (Não pode está conectado à rede)/////
+       ////Comente as duas linhas anteriores e descomente as duas linhas seguintes para teste de malha aberta (Nï¿½o pode estï¿½ conectado ï¿½ rede)/////
        //Valfabeta_pwm.alfa = Vd_ref * pll_grid.costh;
        //Valfabeta_pwm.beta = Vd_ref * pll_grid.sinth;
 
@@ -913,20 +937,65 @@ interrupt void adcb1_isr(void)
     }
 }
 
-//////////////////////////////////////////////////Funções de Controle//////////////////////////////////////
-// Transformada abc para alfabeta
+// sciaTxFifoIsr - SCIA Transmit FIFO ISR
+interrupt void sciaTxFifoIsr(void)
+{
+//    GpioDataRegs.GPBSET.bit.GPIO62 = 1;
+    Uint16 i;
+
+    for(i=0; i< 2; i++)
+    {
+       SciaRegs.SCITXBUF.all=sdataA[i];  // Send data
+    }
+
+//    for(i=0; i< 2; i++)                  // Increment send data for next cycle
+//    {
+//       sdataA[i] = (sdataA[i]+1) & 0x00FF;
+//    }
+    sdataA[0] = P & 0x00FF;
+    sdataA[1] = Q & 0x00FF;
+
+    count += 1;
+
+    if (count >= 2)
+    {
+//        GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
+        count = 0;
+    }
+
+    SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;;       // Issue PIE ACK
+}
+
+// sciaRxFifoIsr - SCIA Receive FIFO ISR
+interrupt void sciaRxFifoIsr(void)
+{
+    Uint16 i;
+
+    for(i=0;i<2;i++)
+    {
+       rdataA[i]=SciaRegs.SCIRXBUF.all;  // Read data
+    }
+
+    SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
+    SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
+
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;       // Issue PIE ack
+}
+//////////////////////////////////////////////////Control Functions//////////////////////////////////////
+// abc-alfabeta transformation
 void TUPA_abc2alfabeta(sABC *p_abc, sAlfaBeta *p_alfabeta)
 {
     // Invariante em amplitude
     p_alfabeta->alfa = 0.66666667*(p_abc->a - 0.5*p_abc->b - 0.5*p_abc->c);
     p_alfabeta->beta = 0.5773502692*(p_abc->b - p_abc->c);
 
-    // Invariante em potência
+    // Invariante em potï¿½ncia
    //p_alfabeta->alfa = 0.816496580927726*(p_abc->a - 0.5*p_abc->b - 0.5*p_abc->c);
    //p_alfabeta->beta = 0.816496580927726*(0.866025403784439*p_abc->b - 0.866025403784439*p_abc->c);
 }
 
-// Transformada alfabeta para abc
+// alfabeta-abc transformation
 void TUPA_alfabeta2abc(sAlfaBeta* p_alfabeta, sABC* p_ABC)
 {
     // Invariante em amplitude
@@ -934,13 +1003,13 @@ void TUPA_alfabeta2abc(sAlfaBeta* p_alfabeta, sABC* p_ABC)
     p_ABC->b = -0.5*p_alfabeta->alfa + 0.866025403784439*p_alfabeta->beta;
     p_ABC->c = -0.5*p_alfabeta->alfa - 0.866025403784439*p_alfabeta->beta;
 
-    // Invariante em potência
+    // Invariante em potï¿½ncia
     //p_ABC->a = 0.816496580927726*p_alfabeta->alfa;
     //p_ABC->b = 0.816496580927726*(-0.5*p_alfabeta->alfa + 0.866025403784439*p_alfabeta->beta);
     //p_ABC->c = 0.816496580927726*(-0.5*p_alfabeta->alfa - 0.866025403784439*p_alfabeta->beta);
 }
 
-// Transformada alfabeta para dq
+// alfabeta-dq transformation
 void TUPA_alfabeta2dq(sAlfaBeta *p_alfabeta, sDQ* p_DQ)
 {
     p_DQ->d = (p_alfabeta->alfa* p_DQ->cosdq + p_alfabeta->beta* p_DQ->sindq);
@@ -1012,7 +1081,7 @@ void TUPA_SRFPLL(sSRFPLL *c)
 
 }
 
-// Controlador PI
+// PI controller
 void TUPA_Pifunc(sPI *reg)
 {
     if(reg->enab==1)
@@ -1041,7 +1110,7 @@ void TUPA_Pifunc(sPI *reg)
     }
 }
 
-// Controlador PR
+// PR controller
 void TUPA_PR(sPR *r)
 {
     if(r->enab==1)
@@ -1062,7 +1131,7 @@ void TUPA_PR(sPR *r)
     r->output = r->Ki*r->res + r->Kp*r->error;
 }
 
-// Filtro passa baixa
+// Low pass filter
 void TUPA_First_order_signals_filter(sFilter1st *x)
 {
 
@@ -1072,7 +1141,7 @@ void TUPA_First_order_signals_filter(sFilter1st *x)
 
 }
 
-//Filtro segunda ordem
+//Second order low pass filter
 void TUPA_Second_order_filter(sFilter2nd *filt)
 {
     filt->y = filt->x*filt->c0 + filt->x_ant*filt->c1 + filt->x_ant2*filt->c2 - filt->y_ant*filt->c3 - filt->y_ant2*filt->c4;
@@ -1090,7 +1159,7 @@ void TUPA_pwm(sABC *p_ABC, sSvm *svp, float Vdc, Uint16 fpwm_cnt)
     Vbn = __divf32(p_ABC->b*1.732050807568877,Vdc);
     Vcn = __divf32(p_ABC->c*1.732050807568877,Vdc);
 
-    // Saturação da Tensão
+    // Saturaï¿½ï¿½o da Tensï¿½o
     if(Van > 1) Van = 1;
     if(Van < -1) Van = -1;
     if(Vbn > 1) Vbn = 1;
@@ -1098,7 +1167,7 @@ void TUPA_pwm(sABC *p_ABC, sSvm *svp, float Vdc, Uint16 fpwm_cnt)
     if(Vcn > 1) Vcn = 1;
     if(Vcn < -1) Vcn = -1;
 
-    //Cálculo da seq zero para o SVPWM
+    //Cï¿½lculo da seq zero para o SVPWM
     if(Van<Vbn && Van<Vcn && Vbn>Vcn)
     {
       vmin = Van;
@@ -1140,7 +1209,7 @@ void TUPA_pwm(sABC *p_ABC, sSvm *svp, float Vdc, Uint16 fpwm_cnt)
 
 }
 
-// Função Rampa
+// Ramp function
 void TUPA_Ramp(Ramp *rmp)
 {
     if(rmp->enab)
@@ -1186,11 +1255,11 @@ void TUPA_Ramp(Ramp *rmp)
     }
 }
 
-/////////////////////////////////////Funções de Sistema//////////////////////////////////////////
-// Função de Proteção do Sistema
+/////////////////////////////////////System Fucntions//////////////////////////////////////////
+// Protection function
 void TUPA_protect(void)
 {
-     // Proteção de sobrecorrente no inversor
+     // Proteï¿½ï¿½o de sobrecorrente no inversor
     if(fabs(entradas_red.Ia) > OVER_CURRENT_GRID_LIMIT || fabs(entradas_red.Ic) > OVER_CURRENT_GRID_LIMIT || fabs(entradas_red.Ib) > OVER_CURRENT_GRID_LIMIT)
     {
         Counts.count3++;
@@ -1208,7 +1277,7 @@ void TUPA_protect(void)
         Counts.count3 = 0;
     }
 
-    // Proteção de sobretensão no dc-link
+    // Proteï¿½ï¿½o de sobretensï¿½o no dc-link
     if(entradas_red.Vdc > DC_OVERVOLTAGE_LIMIT)
     {
         Counts.count4++;
@@ -1226,7 +1295,7 @@ void TUPA_protect(void)
     }
 
 
-    // Proteção do Chopper
+    // Proteï¿½ï¿½o do Chopper
     if(entradas_red.Vdc > MAX_CHOPPER_LIMIT)
     {
         flag.Chopper_On = 1;
@@ -1242,22 +1311,22 @@ void TUPA_protect(void)
     if(*Recv.recv0 == 1 && flag.AbleToStart == 1) flag.Shutdown = 1;
 
 
-    //Verifica se a flag Group_com está indicando que a proteção foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
+    //Verifica se a flag Group_com estï¿½ indicando que a proteï¿½ï¿½o foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
     if(flag.Com_DSP2_read == 1 && flag.AbleToStart == 1) flag.Shutdown = 1;
 
 
 }
 
-// Função de início de funcionamento do sistema
+// System start function
 void TUPA_StartSequence(void)
 {
 
-    //Verifica se a flag Shutdown está acionado
+    //Verifica se a flag Shutdown estï¿½ acionado
      if(flag.Shutdown == 0)
      {
          if(*Recv.recv0 == 0 && flag.Com_DSP2_read == 0) flag.AbleToStart = 1;
 
-         GpioDataRegs.GPACLEAR.bit.GPIO25 = 1;           // Limpa a flag que informa para a DSP02 que a proteção nesse conjunto foi acionada
+         GpioDataRegs.GPACLEAR.bit.GPIO25 = 1;           // Limpa a flag que informa para a DSP02 que a proteï¿½ï¿½o nesse conjunto foi acionada
 
           // Inicia o Start do sistema
           if(flag.Inv_on == 1)
@@ -1268,7 +1337,7 @@ void TUPA_StartSequence(void)
 
                   // Inicia a contagem do tempo da precarga
                   if(Counts.count6 <= PRECHARGE_LIMIT) Counts.count6++;
-                  //Verifica se o tempo máximo para a precarga foi atingido. Ser sim, aciona a proteção e desliga tudo
+                  //Verifica se o tempo mï¿½ximo para a precarga foi atingido. Ser sim, aciona a proteï¿½ï¿½o e desliga tudo
                   if(Counts.count6 > PRECHARGE_LIMIT)
                   {
                       flag.precharge_fail = 1;
@@ -1276,16 +1345,16 @@ void TUPA_StartSequence(void)
                       fault = FAULT_PRECHARGE;
                   }
 
-                  //Verifica se a tensão minima foi alcançada no dc-link
+                  //Verifica se a tensï¿½o minima foi alcanï¿½ada no dc-link
                   if(entradas_red.Vdc >= DC_PRECHARGE_LIMIT)
                   {
                       if(Counts.count5 < 1000) Counts.count5++;
 
-                      // Verifica se a condição anterior é atendida após 1000 medições
+                      // Verifica se a condiï¿½ï¿½o anterior ï¿½ atendida apï¿½s 1000 mediï¿½ï¿½es
                       if(Counts.count5>=1000)
                       {
-                          GpioDataRegs.GPBSET.bit.GPIO59 =  1;     // Fecha o Contator principal de conexão do inversor com a rede
-                          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Abre o Contator da pré-carga
+                          GpioDataRegs.GPBSET.bit.GPIO59 =  1;     // Fecha o Contator principal de conexï¿½o do inversor com a rede
+                          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Abre o Contator da prï¿½-carga
                           flag.precharge_ok = 1;                   // Finaliza a precarga
                       }
 
@@ -1294,18 +1363,18 @@ void TUPA_StartSequence(void)
                   {
                       Counts.count5 = 0;
 
-                      // Abre o contator de pre carga e fecha o principal manualmente (importante quando a tensão nos capacitores não atinge o minimo DC_PRECHARGE_LIMIT. OBS: Cuidado para não fechar este contator com uma tensão baixa no dc-link)
+                      // Abre o contator de pre carga e fecha o principal manualmente (importante quando a tensï¿½o nos capacitores nï¿½o atinge o minimo DC_PRECHARGE_LIMIT. OBS: Cuidado para nï¿½o fechar este contator com uma tensï¿½o baixa no dc-link)
                       if(flag.manual_pre_charge == 1 && entradas_red.Vdc>DC_MANUAL_PRECHARGE_LIMIT)
                       {
-                          GpioDataRegs.GPBSET.bit.GPIO59 =  1;     // Fecha o Contator principal de conexão do inversor com a rede
-                          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Abre o Contator da pré-carga
+                          GpioDataRegs.GPBSET.bit.GPIO59 =  1;     // Fecha o Contator principal de conexï¿½o do inversor com a rede
+                          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Abre o Contator da prï¿½-carga
                           flag.precharge_ok = 1;                   // Finaliza a precarga
                       }
 
                   }
               }
            }
-          //Verifica a flag do chopper de proteção. Se o estado for alto, ativa o Chopper
+          //Verifica a flag do chopper de proteï¿½ï¿½o. Se o estado for alto, ativa o Chopper
           if(flag.Chopper_On == 1)
           {
               GpioDataRegs.GPBSET.bit.GPIO33 = 1;
@@ -1324,10 +1393,10 @@ void TUPA_StartSequence(void)
 
 }
 
-// Função de parada de funcionamento do sistema
+// System stop function
 void TUPA_StopSequence(void)
 {
-    //Verifica se a flag Shutdown está acionado ou se a Shutdown_Conv da CPU2 está acionada (IPC6) e interrompe o chaveamento e abre os contatores
+    //Verifica se a flag Shutdown estï¿½ acionado ou se a Shutdown_Conv da CPU2 estï¿½ acionada (IPC6) e interrompe o chaveamento e abre os contatores
      if(flag.Shutdown == 1)
      {
          flag.AbleToStart = 0;
@@ -1338,20 +1407,20 @@ void TUPA_StopSequence(void)
          GpioDataRegs.GPBCLEAR.bit.GPIO59 =  1;
          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;
 
-         GpioDataRegs.GPASET.bit.GPIO25 = 1;           // Informa para a DSP01 que a proteção nesse conjunto foi acionada
+         GpioDataRegs.GPASET.bit.GPIO25 = 1;           // Informa para a DSP01 que a proteï¿½ï¿½o nesse conjunto foi acionada
 
          flag.manual_pre_charge = 0;                  // Limpa a flag de Pre carga manual
 
      }
 
-     //Verifica a flag do chopper de proteção. Se o estado for baixo, desativa o Chopper
+     //Verifica a flag do chopper de proteï¿½ï¿½o. Se o estado for baixo, desativa o Chopper
      if(flag.Chopper_On == 0)
      {
          GpioDataRegs.GPBCLEAR.bit.GPIO33 = 1;
      }
 }
 
-// Calculo do offset das medições do inversor
+// Calculation of the offset of the inverter measurements
 void Offset_Calculation(void)
 {
       if(Counts.count1 < N_amostras)
@@ -1381,4 +1450,4 @@ void Offset_Calculation(void)
 
 }
 
-// Fim do código
+// End
