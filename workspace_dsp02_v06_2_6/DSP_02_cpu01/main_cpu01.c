@@ -381,7 +381,6 @@ Uint16 i = 0;
 
 //Main
 void main(void)
-
 {
 //
 // Step 1. Initialize System Control:
@@ -443,19 +442,19 @@ void main(void)
 // Map ISR functions
 //
     EALLOW;
-
     PieVectTable.ADCB1_INT = &adcb1_isr;  //function for ADCB interrupt 1
     PieVectTable.IPC1_INT = &IPC1_INT; //function of the interruption of the IPC for communication of CPus
     PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption (Transmitter)
     PieVectTable.SCIA_TX_INT = &sciaTxFifoIsr;  // SCI Rx interruption (Reciever)
     PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
     PieCtrlRegs.PIEIER1.bit.INTx14 = 1;      //IPC1 interruption of intercommunication between CPUs. Enables the corresponding column 14
-    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;    //Enable coloum 1 of the interruption table
+    PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1 SCIA_RX
+    PieCtrlRegs.PIEIER9.bit.INTx2 = 1;   // PIE Group 9, INT2 SCIA_TX
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
-    IER |= M_INT1; //Enable the interrupt table row. corresponding to ADC_B, page 79 of the workshop material
-    IER |= M_INT9; //Enable the interrupt table row 9, CORRESPONDING TO scia TX and RX.
+    //IER |= M_INT1; //Enable the interrupt table row. corresponding to ADC_B, page 79 of the workshop material
+    IER = M_INT1 | M_INT9; //Enable the interrupt table row 9, CORRESPONDING TO scia TX and RX.
     EDIS;
 
 // Configure GPIOs
@@ -501,9 +500,9 @@ void main(void)
     ////Reminder. The CPIs that trigger interruption are 0,1,2 and 3. The others have no interruption and can be used as flags
     //
     // while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
-    IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
-    while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
-    IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag
+    //IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
+    //while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
+    //IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag
 
     // Enables ePwm GPIOs
     InitEPwmGpio();
@@ -552,15 +551,15 @@ void main(void)
        sdataA[i] = i;
     }
 
-//Variable arrow for offset adjustment
-inv_nro_muestras = 1.0/N_amostras;
+    //Variable arrow for offset adjustment
+    inv_nro_muestras = 1.0/N_amostras;
 
-//Enables the PLL PI controller
-pll_grid.PI_pll.enab = 1;
+    //Enables the PLL PI controller
+    pll_grid.PI_pll.enab = 1;
 
-//Infinite Loop
- while(1)
-{
+    //Infinite Loop
+    while(1)
+    {
 
         //Loads the flag related to the digital input responsible for checking if the Shutdown_Conv flag of set 1 has been triggered
         flag.Com_DSP2_read = GpioDataRegs.GPADAT.bit.GPIO24;    //Grid connection contactor status
@@ -682,11 +681,7 @@ pll_grid.PI_pll.enab = 1;
         //which fill the results buffer, eventually setting the bufferFull
         //flag
         //
-
-        // GPIO to check the sampling frequency
-        GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
-
-}
+    }
 }
 
 // Interruption of IPC1 for communication with CPU02
@@ -944,13 +939,16 @@ interrupt void adcb1_isr(void)
        //EPwm9Regs.CMPA.bit.CMPA = sv_grid.Tb;
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
 
+       // GPIO to check the sampling frequency
+       GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
+
     }
 }
 
 // sciaTxFifoIsr - SCIA Transmit FIFO ISR
 interrupt void sciaTxFifoIsr(void)
 {
-//    GpioDataRegs.GPBSET.bit.GPIO62 = 1;
+    //GpioDataRegs.GPBSET.bit.GPIO62 = 1;
     Uint16 i;
 
     for(i=0; i< 2; i++)
@@ -969,12 +967,12 @@ interrupt void sciaTxFifoIsr(void)
 
     if (count >= 2)
     {
-//        GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
+        //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
         count = 0;
     }
 
     SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;;       // Issue PIE ACK
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
 }
 
 // sciaRxFifoIsr - SCIA Receive FIFO ISR
@@ -990,7 +988,7 @@ interrupt void sciaRxFifoIsr(void)
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
 
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;       // Issue PIE ack
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ack
 }
 //////////////////////////////////////////////////Control Functions//////////////////////////////////////
 // abc-alfabeta transformation
