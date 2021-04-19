@@ -370,13 +370,12 @@ Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0; Uint32 sum_CH4 = 0; 
 Uint32 N_amostras = 60000;
 
 // SCI parameters
-Uint16 sdataA[2];    // Send data for SCI-A
-Uint16 rdataA[2];    // Received data for SCI-A
+Uint16 sdataA[3];    // Send data for SCI-A
+Uint16 rdataA[3];    // Received data for SCI-A
 Uint16 rdata_pointA; // Used for checking the received data
 Uint16 P = 0;
 Uint16 Q = 0;
-Uint16 Soc;
-Uint16 count = 0;
+Uint16 Soc = 0;
 Uint16 i = 0;
 
 //Main
@@ -546,7 +545,7 @@ void main(void)
  // Init send data.  After each transmission this data
  // will be updated for the next transmission
  //
-    for(i = 0; i<2; i++)
+    for(i = 0; i<3; i++)
     {
        sdataA[i] = i;
     }
@@ -716,9 +715,6 @@ interrupt void adcb1_isr(void)
     // It is determine when a EPWMxSOCA pulse will be generated (Defining the sample frequency)
     //if(EPwm1Regs.ETSEL.bit.SOCASEL == 2) EPwm1Regs.ETSEL.bit.SOCASEL = 1;
     //else EPwm1Regs.ETSEL.bit.SOCASEL = 2;
-
-    AdcbRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;  //ADC Interrupt 1 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Limpa a flag da interrup��o da correspondente linha. Se n�o fazer isso, uma nova interrup��o n�o � poss�vel pq essa flag n�o � limpa
 
     //Piscar o LED 2 em uma determinada frequecia
     Counts.count7 ++;
@@ -940,36 +936,30 @@ interrupt void adcb1_isr(void)
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
 
        // GPIO to check the sampling frequency
-       GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
-
     }
+
+    GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
+
+    AdcbRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;  //ADC Interrupt 1 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Clear the flag for the interruption of the corresponding line. If you do not do this, a new interruption does not occur
 }
 
 // sciaTxFifoIsr - SCIA Transmit FIFO ISR
 interrupt void sciaTxFifoIsr(void)
 {
-    //GpioDataRegs.GPBSET.bit.GPIO62 = 1;
+    // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
     Uint16 i;
 
-    for(i=0; i< 2; i++)
+    for(i=0; i< 3; i++)
     {
        SciaRegs.SCITXBUF.all=sdataA[i];  // Send data
     }
 
-//    for(i=0; i< 2; i++)                  // Increment send data for next cycle
-//    {
-//       sdataA[i] = (sdataA[i]+1) & 0x00FF;
-//    }
     sdataA[0] = P & 0x00FF;
     sdataA[1] = Q & 0x00FF;
+    sdataA[2] = Soc & 0x00FF;
 
-    count += 1;
-
-    if (count >= 2)
-    {
-        //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
-        count = 0;
-    }
+    //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
 
     SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
@@ -980,7 +970,7 @@ interrupt void sciaRxFifoIsr(void)
 {
     Uint16 i;
 
-    for(i=0;i<2;i++)
+    for(i=0;i<3;i++)
     {
        rdataA[i]=SciaRegs.SCIRXBUF.all;  // Read data
     }
