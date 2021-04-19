@@ -10,9 +10,9 @@
 #define N                       (Nsample*PWM_FREQ)/20             // N Usado para o c�lculo da m�dia movel
 
 // SCI Definitions
-#define CPU_FREQ        100E6
-#define LSPCLK_FREQ     CPU_FREQ/5
-#define SCI_FREQ        10E3
+#define CPU_FREQ        200E6
+#define LSPCLK_FREQ     CPU_FREQ/4
+#define SCI_FREQ        125E3
 #define SCI_PRD         ((LSPCLK_FREQ/(SCI_FREQ*8))-1)
 
 //Constantes
