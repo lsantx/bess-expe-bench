@@ -7,6 +7,9 @@
 //
 #include "F28x_Project.h"
 #include "math.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "Peripheral_Interruption_Setup_cpu01.h"
 #include "Tupa_parameters_cpu01.h"
@@ -327,7 +330,7 @@ void TUPA_First_order_signals_filter(sFilter1st *);
 void TUPA_PR(sPR *);
 void TUPA_Ramp(Ramp *);
 void TUPA_Second_order_filter(sFilter2nd *);
-
+char * extrac_digits(int);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
 //Variable for offset adjustment
@@ -370,13 +373,16 @@ Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0; Uint32 sum_CH4 = 0; 
 Uint32 N_amostras = 60000;
 
 // SCI parameters
-Uint16 sdataA[3];    // Send data for SCI-A
-Uint16 rdataA[3];    // Received data for SCI-A
-Uint16 rdata_pointA; // Used for checking the received data
-Uint16 P = 0;
-Uint16 Q = 0;
-Uint16 Soc = 0;
+int pref = 0;
+int qref = 0;
+float pout = 0;
+float qout = 0;
+float soc = 0;
 Uint16 i = 0;
+char msg_tx[19];
+char msg_rx[19];
+char reset[19] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+Uint16 len_tx = 0;
 
 //Main
 void main(void)
@@ -542,14 +548,6 @@ void main(void)
 
      resultsIndex2 = 0;
 
- // Init send data.  After each transmission this data
- // will be updated for the next transmission
- //
-    for(i = 0; i<3; i++)
-    {
-       sdataA[i] = i;
-    }
-
     //Variable arrow for offset adjustment
     inv_nro_muestras = 1.0/N_amostras;
 
@@ -559,7 +557,6 @@ void main(void)
     //Infinite Loop
     while(1)
     {
-
         //Loads the flag related to the digital input responsible for checking if the Shutdown_Conv flag of set 1 has been triggered
         flag.Com_DSP2_read = GpioDataRegs.GPADAT.bit.GPIO24;    //Grid connection contactor status
 
@@ -934,8 +931,6 @@ interrupt void adcb1_isr(void)
        //EPwm6Regs.CMPA.bit.CMPA = sv_grid.Ta;
        //EPwm9Regs.CMPA.bit.CMPA = sv_grid.Tb;
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
-
-       // GPIO to check the sampling frequency
     }
 
     GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -944,36 +939,117 @@ interrupt void adcb1_isr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Clear the flag for the interruption of the corresponding line. If you do not do this, a new interruption does not occur
 }
 
-// sciaTxFifoIsr - SCIA Transmit FIFO ISR
+// sciaTxFifoIsr - SCIA Transmit FIFO ISR - IAs9999Rs9999S9999F
 interrupt void sciaTxFifoIsr(void)
 {
     // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
+
     Uint16 i;
 
-    for(i=0; i< 3; i++)
+    char *aux;
+    aux = malloc(sizeof(char));
+
+    pout = 4000.54;
+    qout = 1000.54;
+    soc = 25.4;
+
+    strcpy(msg_tx, reset);
+
+    strcat(msg_tx, "I");
+    //
+    strcat(msg_tx, "A");
+
+    if((int) pout > 0) strcat(msg_tx, "+");
+    else if((int) pout < 0) strcat(msg_tx, "-");
+    else strcat(msg_tx, "0");
+
+//    aux = extrac_digits((int) pout);
+//    strcat(msg_tx, aux);
+//
+//    strcat(msg_tx, "R");
+//    if((int) pout > 0) strcat(msg_tx, "+");
+//    else if((int) pout < 0) strcat(msg_tx, "-");
+//    else strcat(msg_tx, "0");
+//    aux = extrac_digits((int) qout);
+//    strcat(msg_tx, aux);
+//
+//    strcat(msg_tx, "S");
+//    int n_decimal_points_precision = 100;
+//    int integerPart = (int)soc;
+//    int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
+//    aux = extrac_digits((int) integerPart);
+//    strcat(msg_tx, aux);
+//    aux = extrac_digits((int) decimalPart);
+//    strcat(msg_tx, aux);
+//
+//    strcat(msg_tx, "F");
+
+    len_tx = strlen(msg_tx);
+
+    SciaRegs.SCIFFTX.bit.TXFFIL = len_tx;
+
+    for(i=0; i<len_tx; i++)
     {
-       SciaRegs.SCITXBUF.all=sdataA[i];  // Send data
+        SciaRegs.SCITXBUF.all=msg_tx[i];  // Send data
     }
 
-    sdataA[0] = P & 0x00FF;
-    sdataA[1] = Q & 0x00FF;
-    sdataA[2] = Soc & 0x00FF;
-
+    free(aux);
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
 
     SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
 }
 
-// sciaRxFifoIsr - SCIA Receive FIFO ISR
+// sciaRxFifoIsr - SCIA Receive FIFO ISR - IAs9999Rs9999F
 interrupt void sciaRxFifoIsr(void)
 {
-    Uint16 i;
+    char *aux;
+    aux = malloc(sizeof(char));
+    int ant = 0;
 
-    for(i=0;i<3;i++)
+    Uint16 i = 0;
+
+    SciaRegs.SCIFFRX.bit.RXFFIL = 3;
+
+    for(i=0; i < 3; i++)
     {
-       rdataA[i]=SciaRegs.SCIRXBUF.all;  // Read data
+        msg_rx[i] = SciaRegs.SCIRXBUF.all;  // Read data
     }
+//
+//    i = 0;
+
+//    while (1)
+//    {
+//        if (msg_rx[i] == 70 || i == 50) break;
+//        if (ant == 65)
+//        {
+//            int j = 0;
+//            while(msg_rx[i] != 82 || i == 50)
+//            {
+//                aux[j] = msg_rx[i];
+//                j += 1;
+//                i += 1;
+//            }
+//            pref = strtol(aux, NULL, 10);
+//        }
+//
+//        if (ant == 82)
+//        {
+//            int j = 0;
+//            while(msg_rx[i] != 70 || i == 50)
+//            {
+//                aux[j] = msg_rx[i];
+//                j += 1;
+//                i += 1;
+//            }
+//            qref = strtol(aux, NULL, 10);
+//        }
+//
+//        ant = msg_rx[i];
+//        i += 1;
+//    }
+
+    free(aux);
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
@@ -1251,6 +1327,31 @@ void TUPA_Ramp(Ramp *rmp)
             }
         }
     }
+}
+
+// Extract digit of a number for communication
+char * extrac_digits(int num)
+{
+    Uint16 i = 0;
+    char *arr;
+    arr = malloc(sizeof(char));
+
+    while(num > 0) //do till num greater than  0
+    {
+        int mod = num % 10;  //split last digit from number
+        num = num / 10;    //divide num by 10. num /= 10 also a valid one
+        arr[i] = mod+'0';
+        i += 1;
+    }
+    int size = strlen(arr);
+    for (i = 0; i < size/2; i++)
+    {
+        int temp = arr[i];
+        arr[i] = arr[size - 1 - i];
+        arr[size - 1 - i] = temp;
+    }
+
+    return arr;
 }
 
 /////////////////////////////////////System Fucntions//////////////////////////////////////////

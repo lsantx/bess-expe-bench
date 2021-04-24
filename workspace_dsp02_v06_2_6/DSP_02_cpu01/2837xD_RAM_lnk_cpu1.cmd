@@ -12,7 +12,7 @@ PAGE 0 :
    //RAMLS2      		: origin = 0x009000, length = 0x000800
    //RAMLS3      		: origin = 0x009800, length = 0x000800
    //RAMLS4      		: origin = 0x00A000, length = 0x000800
-   RAMLS04              : origin = 0x008000, length = 0x002800                       // Combinei todas as memórias para alocar o .text
+   RAMLS04              : origin = 0x008000, length = 0x002800                       // Combinei todas as memï¿½rias para alocar o .text
    RESET              	: origin = 0x3FFFC0, length = 0x000002
 
 PAGE 1 :
@@ -59,12 +59,12 @@ SECTIONS
    .reset           : > RESET,     PAGE = 0, TYPE = DSECT /* not used, */
 
    .stack           : > RAMM1,     PAGE = 1
-   .ebss            : > RAMGS5,    PAGE = 1     //juntei o RAMGS5, RAMGS6 e RAMGS7 para formar um único buffer
+   .ebss            : > RAMGS5,    PAGE = 1     //juntei o RAMGS5, RAMGS6 e RAMGS7 para formar um ï¿½nico buffer
    .econst          : > RAMLS5,    PAGE = 1
    .esysmem         : > RAMLS5,    PAGE = 1
    Filter_RegsFile  : > RAMGS0,	   PAGE = 1
 
-   SHARERAMGS1      : > RAMGS1,    PAGE = 1     //Memória compartilhada do CPU1 para o CPU2
+   SHARERAMGS1      : > RAMGS1,    PAGE = 1     //Memï¿½ria compartilhada do CPU1 para o CPU2
 
    ramgs0           : > RAMGS0,    PAGE = 1
    ramgs1           : > RAMGS1,    PAGE = 1
