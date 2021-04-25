@@ -576,6 +576,9 @@ void scia_fifo_init(void)
    SciaRegs.SCIFFRX.all = 0x023;
    SciaRegs.SCIFFCT.all = 0x00;
 
+   SciaRegs.SCIFFTX.bit.TXFFIL = 8;
+   SciaRegs.SCIFFRX.bit.RXFFIL = 8;
+
    SciaRegs.SCICTL1.all = 0x0023;     // Relinquish SCI from Reset
    SciaRegs.SCIFFTX.bit.TXFIFORESET = 1;
    SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;

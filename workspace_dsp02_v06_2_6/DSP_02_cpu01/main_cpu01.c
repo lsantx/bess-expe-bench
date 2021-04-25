@@ -383,6 +383,8 @@ char msg_tx[19];
 char msg_rx[19];
 char reset[19] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 Uint16 len_tx = 0;
+Uint16 sdataA[8];    // Send data for SCI-A
+Uint16 rdataA[8];    // Received data for SCI-A
 
 //Main
 void main(void)
@@ -902,7 +904,7 @@ interrupt void adcb1_isr(void)
        PR_Ib_7.feedback = PR_Ib_fund.feedback;
        PR_Ib_11.feedback = PR_Ib_fund.feedback;
 
-       // Fun��es dos controladores ressonantes
+       // PR Controllers
        TUPA_PR(&PR_Ia_fund);
        TUPA_PR(&PR_Ia_5);
        TUPA_PR(&PR_Ia_7);
@@ -912,7 +914,7 @@ interrupt void adcb1_isr(void)
        TUPA_PR(&PR_Ib_7);
        TUPA_PR(&PR_Ib_11);
 
-       //Sa�da dos controladores ressonantes
+       //PR Outputs
        Valfabeta_pwm.alfa = PR_Ia_fund.output + PR_Ia_5.output + PR_Ia_7.output + pll_grid.alfa;
        Valfabeta_pwm.beta = PR_Ib_fund.output + PR_Ib_5.output + PR_Ib_7.output + pll_grid.beta;
 
@@ -932,7 +934,7 @@ interrupt void adcb1_isr(void)
        //EPwm9Regs.CMPA.bit.CMPA = sv_grid.Tb;
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
 
-       //TxBufferAqu();
+       TxBufferAqu();
     }
 
     GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -941,19 +943,25 @@ interrupt void adcb1_isr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Clear the flag for the interruption of the corresponding line. If you do not do this, a new interruption does not occur
 }
 
-// sciaTxFifoIsr - SCIA Transmit FIFO ISR - IAs9999Rs9999S9999F
+// sciaTxFifoIsr - SCIA Transmit FIFO ISR
 interrupt void sciaTxFifoIsr(void)
 {
     // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
-
     Uint16 i;
 
-    SciaRegs.SCIFFTX.bit.TXFFIL = 19;
-
-    for(i=0; i<19; i++)
+    for(i=0; i< 8; i++)
     {
-        SciaRegs.SCITXBUF.all=msg_tx[i];  // Send data
+       SciaRegs.SCITXBUF.all=sdataA[i];  // Send data
     }
+
+    sdataA[0] = msg_tx[0];
+    sdataA[1] = msg_tx[1];
+    sdataA[2] = msg_tx[2];
+    sdataA[3] = msg_tx[3];
+    sdataA[4] = msg_tx[4];
+    sdataA[5] = msg_tx[5];
+    sdataA[6] = msg_tx[6];
+    sdataA[7] = msg_tx[7];
 
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
 
@@ -962,55 +970,15 @@ interrupt void sciaTxFifoIsr(void)
 }
 
 // sciaRxFifoIsr - SCIA Receive FIFO ISR - IAs9999Rs9999F
+// sciaRxFifoIsr - SCIA Receive FIFO ISR
 interrupt void sciaRxFifoIsr(void)
 {
-    char *aux;
-    aux = malloc(sizeof(char));
-    int ant = 0;
+    Uint16 i;
 
-    Uint16 i = 0;
-
-    SciaRegs.SCIFFRX.bit.RXFFIL = 19;
-
-    for(i=0; i < 19; i++)
+    for(i=0;i<8;i++)
     {
-        msg_rx[i] = SciaRegs.SCIRXBUF.all;  // Read data
+       rdataA[i]=SciaRegs.SCIRXBUF.all;  // Read data
     }
-//
-//    i = 0;
-
-//    while (1)
-//    {
-//        if (msg_rx[i] == 70 || i == 50) break;
-//        if (ant == 65)
-//        {
-//            int j = 0;
-//            while(msg_rx[i] != 82 || i == 50)
-//            {
-//                aux[j] = msg_rx[i];
-//                j += 1;
-//                i += 1;
-//            }
-//            pref = strtol(aux, NULL, 10);
-//        }
-//
-//        if (ant == 82)
-//        {
-//            int j = 0;
-//            while(msg_rx[i] != 70 || i == 50)
-//            {
-//                aux[j] = msg_rx[i];
-//                j += 1;
-//                i += 1;
-//            }
-//            qref = strtol(aux, NULL, 10);
-//        }
-//
-//        ant = msg_rx[i];
-//        i += 1;
-//    }
-
-    free(aux);
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
