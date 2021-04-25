@@ -330,6 +330,7 @@ void TUPA_First_order_signals_filter(sFilter1st *);
 void TUPA_PR(sPR *);
 void TUPA_Ramp(Ramp *);
 void TUPA_Second_order_filter(sFilter2nd *);
+void TxBufferAqu(void);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
 //Variable for offset adjustment
@@ -930,6 +931,8 @@ interrupt void adcb1_isr(void)
        //EPwm6Regs.CMPA.bit.CMPA = sv_grid.Ta;
        //EPwm9Regs.CMPA.bit.CMPA = sv_grid.Tb;
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
+
+       //TxBufferAqu();
     }
 
     GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -945,49 +948,9 @@ interrupt void sciaTxFifoIsr(void)
 
     Uint16 i;
 
-    char aux[4] = {0, 0, 0, 0};
+    SciaRegs.SCIFFTX.bit.TXFFIL = 19;
 
-    pout = 4000.54;
-    qout = 1000.54;
-    soc = 25.4;
-
-    strcpy(msg_tx, reset);
-
-    strcat(msg_tx, "I");
-    //
-    strcat(msg_tx, "A");
-
-    if((int) pout > 0) strcat(msg_tx, "+");
-    else if((int) pout < 0) strcat(msg_tx, "-");
-    else strcat(msg_tx, "0");
-
-    sprintf(aux, "%d", (int) pout);
-    strcat(msg_tx, aux);
-//
-//    strcat(msg_tx, "R");
-//    if((int) pout > 0) strcat(msg_tx, "+");
-//    else if((int) pout < 0) strcat(msg_tx, "-");
-//    else strcat(msg_tx, "0");
-//
-//    sprintf(aux, "%d", (int) abs(pout));
-//    strcat(msg_tx, aux);
-////
-//    strcat(msg_tx, "S");
-//    int n_decimal_points_precision = 100;
-//    int integerPart = (int)soc;
-//    int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
-//    sprintf(aux, "%d", integerPart);
-//    strcat(msg_tx, aux);
-//    sprintf(aux, "%d", decimalPart);
-//    strcat(msg_tx, aux);
-//
-//    strcat(msg_tx, "F");
-
-    len_tx = strlen(msg_tx);
-
-    SciaRegs.SCIFFTX.bit.TXFFIL = len_tx;
-
-    for(i=0; i<len_tx; i++)
+    for(i=0; i<19; i++)
     {
         SciaRegs.SCITXBUF.all=msg_tx[i];  // Send data
     }
@@ -1007,9 +970,9 @@ interrupt void sciaRxFifoIsr(void)
 
     Uint16 i = 0;
 
-    SciaRegs.SCIFFRX.bit.RXFFIL = 7;
+    SciaRegs.SCIFFRX.bit.RXFFIL = 19;
 
-    for(i=0; i < 7; i++)
+    for(i=0; i < 19; i++)
     {
         msg_rx[i] = SciaRegs.SCIRXBUF.all;  // Read data
     }
@@ -1325,6 +1288,49 @@ void TUPA_Ramp(Ramp *rmp)
             }
         }
     }
+}
+
+void TxBufferAqu(void)
+{
+    char aux[4] = {0, 0, 0, 0};
+
+    pout = 4000.54;
+    qout = 1000.54;
+    soc = 25.4;
+
+    strcpy(msg_tx, reset);
+
+    strcat(msg_tx, "I");
+    strcat(msg_tx, "A");
+
+    if((int) pout > 0) strcat(msg_tx, "+");
+    else if((int) pout < 0) strcat(msg_tx, "-");
+    else strcat(msg_tx, "0");
+
+    sprintf(aux, "%d", (int) pout);
+    strcat(msg_tx, aux);
+
+    strcat(msg_tx, "R");
+
+    if((int) pout > 0) strcat(msg_tx, "+");
+    else if((int) pout < 0) strcat(msg_tx, "-");
+    else strcat(msg_tx, "0");
+
+    sprintf(aux, "%d", (int) abs(qout));
+    strcat(msg_tx, aux);
+
+   strcat(msg_tx, "S");
+
+    int n_decimal_points_precision = 100;
+    int integerPart = (int)soc;
+    int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
+    sprintf(aux, "%d", integerPart);
+    strcat(msg_tx, aux);
+    sprintf(aux, "%d", decimalPart);
+    strcat(msg_tx, aux);
+
+    strcat(msg_tx, "F");
+
 }
 /////////////////////////////////////System Fucntions//////////////////////////////////////////
 // Protection function
