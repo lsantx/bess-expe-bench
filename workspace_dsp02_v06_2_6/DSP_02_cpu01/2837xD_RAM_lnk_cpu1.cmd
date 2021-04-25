@@ -34,11 +34,11 @@ PAGE 1 :
    RAMGS8      : origin = 0x014000, length = 0x001000
    RAMGS9      : origin = 0x015000, length = 0x001000
    RAMGS10     : origin = 0x016000, length = 0x001000
-   RAMGS11     : origin = 0x017000, length = 0x001000
-   RAMGS12     : origin = 0x018000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
-   RAMGS13     : origin = 0x019000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
-   RAMGS14     : origin = 0x01A000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
-   RAMGS15     : origin = 0x01B000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
+   RAMGS11     : origin = 0x017000, length = 0x005000
+   //RAMGS12     : origin = 0x018000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
+   //RAMGS13     : origin = 0x019000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
+   //RAMGS14     : origin = 0x01A000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
+   //RAMGS15     : origin = 0x01B000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
 
    CPU2TOCPU1RAM   : origin = 0x03F800, length = 0x000400
    CPU1TOCPU2RAM   : origin = 0x03FC00, length = 0x000400
@@ -52,7 +52,7 @@ SECTIONS
 {
    codestart        : > BEGIN,     PAGE = 0
 //   .text          : >>RAMM0 | RAMD0 |  RAMLS0 | RAMLS1 | RAMLS2 | RAMLS3 | RAMLS4,   PAGE = 0
-   .text            : > RAMLS04,   PAGE = 0
+   .text            : > RAMGS11,   PAGE = 1
    .cinit           : > RAMM0 | RAMD0,     PAGE = 0    //Acrescentei RAMD0
    .pinit           : > RAMM0,     PAGE = 0
    .switch          : > RAMM0,     PAGE = 0

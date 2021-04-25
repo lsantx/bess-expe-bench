@@ -330,7 +330,6 @@ void TUPA_First_order_signals_filter(sFilter1st *);
 void TUPA_PR(sPR *);
 void TUPA_Ramp(Ramp *);
 void TUPA_Second_order_filter(sFilter2nd *);
-char * extrac_digits(int);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
 //Variable for offset adjustment
@@ -946,8 +945,7 @@ interrupt void sciaTxFifoIsr(void)
 
     Uint16 i;
 
-    char *aux;
-    aux = malloc(sizeof(char));
+    char aux[4] = {0, 0, 0, 0};
 
     pout = 4000.54;
     qout = 1000.54;
@@ -963,23 +961,24 @@ interrupt void sciaTxFifoIsr(void)
     else if((int) pout < 0) strcat(msg_tx, "-");
     else strcat(msg_tx, "0");
 
-//    aux = extrac_digits((int) pout);
-//    strcat(msg_tx, aux);
+    sprintf(aux, "%d", (int) pout);
+    strcat(msg_tx, aux);
 //
 //    strcat(msg_tx, "R");
 //    if((int) pout > 0) strcat(msg_tx, "+");
 //    else if((int) pout < 0) strcat(msg_tx, "-");
 //    else strcat(msg_tx, "0");
-//    aux = extrac_digits((int) qout);
-//    strcat(msg_tx, aux);
 //
+//    sprintf(aux, "%d", (int) abs(pout));
+//    strcat(msg_tx, aux);
+////
 //    strcat(msg_tx, "S");
 //    int n_decimal_points_precision = 100;
 //    int integerPart = (int)soc;
 //    int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
-//    aux = extrac_digits((int) integerPart);
+//    sprintf(aux, "%d", integerPart);
 //    strcat(msg_tx, aux);
-//    aux = extrac_digits((int) decimalPart);
+//    sprintf(aux, "%d", decimalPart);
 //    strcat(msg_tx, aux);
 //
 //    strcat(msg_tx, "F");
@@ -993,7 +992,6 @@ interrupt void sciaTxFifoIsr(void)
         SciaRegs.SCITXBUF.all=msg_tx[i];  // Send data
     }
 
-    free(aux);
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
 
     SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
@@ -1009,9 +1007,9 @@ interrupt void sciaRxFifoIsr(void)
 
     Uint16 i = 0;
 
-    SciaRegs.SCIFFRX.bit.RXFFIL = 3;
+    SciaRegs.SCIFFRX.bit.RXFFIL = 7;
 
-    for(i=0; i < 3; i++)
+    for(i=0; i < 7; i++)
     {
         msg_rx[i] = SciaRegs.SCIRXBUF.all;  // Read data
     }
@@ -1328,32 +1326,6 @@ void TUPA_Ramp(Ramp *rmp)
         }
     }
 }
-
-// Extract digit of a number for communication
-char * extrac_digits(int num)
-{
-    Uint16 i = 0;
-    char *arr;
-    arr = malloc(sizeof(char));
-
-    while(num > 0) //do till num greater than  0
-    {
-        int mod = num % 10;  //split last digit from number
-        num = num / 10;    //divide num by 10. num /= 10 also a valid one
-        arr[i] = mod+'0';
-        i += 1;
-    }
-    int size = strlen(arr);
-    for (i = 0; i < size/2; i++)
-    {
-        int temp = arr[i];
-        arr[i] = arr[size - 1 - i];
-        arr[size - 1 - i] = temp;
-    }
-
-    return arr;
-}
-
 /////////////////////////////////////System Fucntions//////////////////////////////////////////
 // Protection function
 void TUPA_protect(void)
