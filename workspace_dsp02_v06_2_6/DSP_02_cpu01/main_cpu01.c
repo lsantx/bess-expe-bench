@@ -993,7 +993,7 @@ interrupt void sciaRxFifoIsr(void)
 
     for(i=0; i<8; i++)
     {
-        msg_rx[send_inter] = sdataA[i];
+        msg_rx[send_inter] = rdataA[i];
         send_inter += 1;
 
         if(send_inter>=len_msg) send_inter = 0;
