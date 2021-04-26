@@ -290,9 +290,10 @@ typedef struct{
     Uint32 count7;
     Uint32 count8;
     Uint32 count9;
+    Uint16 count10;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //Variables to send data from CPU1 to CPU2
@@ -375,9 +376,9 @@ Uint32 N_amostras = 60000;
 // SCI parameters
 int pref = 0;
 int qref = 0;
-float pout = 0;
-float qout = 0;
-float soc = 0;
+float pout = 4000.54;
+float qout = 1000.54;
+float soc = 25.4;
 Uint16 i = 0;
 char msg_tx[19];
 char msg_rx[19];
@@ -385,6 +386,8 @@ char reset[19] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 Uint16 len_tx = 0;
 Uint16 sdataA[8];    // Send data for SCI-A
 Uint16 rdataA[8];    // Received data for SCI-A
+Uint16 send_inter = 0;
+Uint16 len_msg = 0;
 
 //Main
 void main(void)
@@ -934,7 +937,13 @@ interrupt void adcb1_isr(void)
        //EPwm9Regs.CMPA.bit.CMPA = sv_grid.Tb;
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
 
-       TxBufferAqu();
+       Counts.count10 += 1;
+
+       if(Counts.count10 >= 1000)
+       {
+           Counts.count10 = 0;
+           TxBufferAqu();
+       }
     }
 
     GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -949,19 +958,18 @@ interrupt void sciaTxFifoIsr(void)
     // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
     Uint16 i;
 
-    for(i=0; i< 8; i++)
+    for(i=0; i < 8; i++)
     {
        SciaRegs.SCITXBUF.all=sdataA[i];  // Send data
     }
 
-    sdataA[0] = msg_tx[0];
-    sdataA[1] = msg_tx[1];
-    sdataA[2] = msg_tx[2];
-    sdataA[3] = msg_tx[3];
-    sdataA[4] = msg_tx[4];
-    sdataA[5] = msg_tx[5];
-    sdataA[6] = msg_tx[6];
-    sdataA[7] = msg_tx[7];
+    for(i=0; i<8; i++)
+    {
+        sdataA[i] = msg_tx[send_inter];
+        send_inter += 1;
+
+        if(send_inter>=len_msg) send_inter = 0;
+    }
 
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
 
@@ -1262,15 +1270,12 @@ void TxBufferAqu(void)
 {
     char aux[4] = {0, 0, 0, 0};
 
-    pout = 4000.54;
-    qout = 1000.54;
-    soc = 25.4;
-
     strcpy(msg_tx, reset);
 
     strcat(msg_tx, "I");
     strcat(msg_tx, "A");
 
+    
     if((int) pout > 0) strcat(msg_tx, "+");
     else if((int) pout < 0) strcat(msg_tx, "-");
     else strcat(msg_tx, "0");
@@ -1287,17 +1292,21 @@ void TxBufferAqu(void)
     sprintf(aux, "%d", (int) abs(qout));
     strcat(msg_tx, aux);
 
-   strcat(msg_tx, "S");
+    strcat(msg_tx, "S");
 
     int n_decimal_points_precision = 100;
     int integerPart = (int)soc;
     int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
+
     sprintf(aux, "%d", integerPart);
     strcat(msg_tx, aux);
+
     sprintf(aux, "%d", decimalPart);
     strcat(msg_tx, aux);
 
     strcat(msg_tx, "F");
+
+    len_msg = strlen(msg_tx);
 
 }
 /////////////////////////////////////System Fucntions//////////////////////////////////////////
@@ -1338,7 +1347,6 @@ void TUPA_protect(void)
     {
         Counts.count4 = 0;
     }
-
 
     // Prote��o do Chopper
     if(entradas_red.Vdc > MAX_CHOPPER_LIMIT)
