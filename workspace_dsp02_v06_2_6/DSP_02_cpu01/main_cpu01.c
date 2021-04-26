@@ -332,6 +332,7 @@ void TUPA_PR(sPR *);
 void TUPA_Ramp(Ramp *);
 void TUPA_Second_order_filter(sFilter2nd *);
 void TxBufferAqu(void);
+void RxBufferAqu(void);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
 //Variable for offset adjustment
@@ -387,6 +388,7 @@ Uint16 len_tx = 0;
 Uint16 sdataA[8];    // Send data for SCI-A
 Uint16 rdataA[8];    // Received data for SCI-A
 Uint16 send_inter = 0;
+Uint16 receiv_inter = 0;
 Uint16 len_msg = 0;
 
 //Main
@@ -943,6 +945,7 @@ interrupt void adcb1_isr(void)
        {
            Counts.count10 = 0;
            TxBufferAqu();
+           RxBufferAqu();
        }
     }
 
@@ -986,6 +989,14 @@ interrupt void sciaRxFifoIsr(void)
     for(i=0;i<8;i++)
     {
        rdataA[i]=SciaRegs.SCIRXBUF.all;  // Read data
+    }
+
+    for(i=0; i<8; i++)
+    {
+        msg_rx[send_inter] = sdataA[i];
+        send_inter += 1;
+
+        if(send_inter>=len_msg) send_inter = 0;
     }
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
@@ -1266,6 +1277,7 @@ void TUPA_Ramp(Ramp *rmp)
     }
 }
 
+// Tx funtion
 void TxBufferAqu(void)
 {
     char aux[4] = {0, 0, 0, 0};
@@ -1309,6 +1321,55 @@ void TxBufferAqu(void)
     len_msg = strlen(msg_tx);
 
 }
+
+// Rx funtion
+void RxBufferAqu(void)
+{
+    // int ant = 0;
+    // char aux[4] = {0, 0, 0, 0};
+
+    // int i = 0;
+    // for(i=0; i < 8; i++)
+    // {
+    //     msg_rx[i] = rdata[i];  // Read data
+    // }
+    // i = 0;
+    // while (1)
+    // {
+    //     if (msg_rx[i] == 70 || i == 50) break;
+    //     if (ant == 65)
+    //     {
+    //         int j = 0;
+    //         while(msg_rx[i] != 82 || i == 50)
+    //         {
+    //             aux[j] = msg_rx[i];
+    //             j += 1;
+    //             i += 1;
+    //         }
+    //         scitx->pref = strtol(aux, NULL, 10);
+    //     }
+
+    //     if (ant == 82)
+    //     {
+    //         int j = 0;
+    //         while(msg_rx[i] != 70 || i == 50)
+    //         {
+    //             aux[j] = msg_rx[i];
+    //             j += 1;
+    //             i += 1;
+    //         }
+    //         scitx->qref = strtol(aux, NULL, 10);
+    //     }
+       
+    //     ant = msg_rx[i];
+    //     i += 1;
+    // }
+    // free(aux);
+    // printf("%d\n", scitx->pref);
+    // printf("%d\n", scitx->qref);
+
+}
+
 /////////////////////////////////////System Fucntions//////////////////////////////////////////
 // Protection function
 void TUPA_protect(void)
