@@ -571,7 +571,7 @@ void scia_fifo_init(void)
    SciaRegs.SCICTL2.bit.RXBKINTENA = 1;
    SciaRegs.SCIHBAUD.all = ((uint16_t)SCI_PRD  & 0xFF00U) >> 8U;
    SciaRegs.SCILBAUD.all = (uint16_t)SCI_PRD  & 0x00FFU;
-   SciaRegs.SCICCR.bit.LOOPBKENA = 1; // Enable loop back
+//   SciaRegs.SCICCR.bit.LOOPBKENA = 0; // Enable loop back
    SciaRegs.SCIFFTX.all = 0xC023;
    SciaRegs.SCIFFRX.all = 0x023;
    SciaRegs.SCIFFCT.all = 0x00;
