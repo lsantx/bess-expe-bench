@@ -941,10 +941,14 @@ interrupt void adcb1_isr(void)
 
        Counts.count10 += 1;
 
-       if(Counts.count10 >= 1000)
+       if(Counts.count10 == 1000)
+       {
+           TxBufferAqu();
+       }
+
+       if(Counts.count10 == 10000)
        {
            Counts.count10 = 0;
-           TxBufferAqu();
            RxBufferAqu();
        }
     }
@@ -971,7 +975,7 @@ interrupt void sciaTxFifoIsr(void)
         sdataA[i] = msg_tx[send_inter];
         send_inter += 1;
 
-        if(send_inter>=len_msg) send_inter = 0;
+        if(send_inter>=19) send_inter = 0;
     }
 
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -996,7 +1000,7 @@ interrupt void sciaRxFifoIsr(void)
         msg_rx[send_inter] = rdataA[i];
         send_inter += 1;
 
-        if(send_inter>=len_msg) send_inter = 0;
+        if(send_inter>=19) send_inter = 0;
     }
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
@@ -1281,6 +1285,7 @@ void TUPA_Ramp(Ramp *rmp)
 void TxBufferAqu(void)
 {
     char aux[4] = {0, 0, 0, 0};
+    Uint16 i = 0;
 
     strcpy(msg_tx, reset);
 
@@ -1288,17 +1293,17 @@ void TxBufferAqu(void)
     strcat(msg_tx, "A");
 
     
-    if((int) pout > 0) strcat(msg_tx, "+");
+    if((int) pout >= 0) strcat(msg_tx, "+");
     else if((int) pout < 0) strcat(msg_tx, "-");
     else strcat(msg_tx, "0");
 
-    sprintf(aux, "%d", (int) pout);
+    sprintf(aux, "%d", (int) abs(pout));
     strcat(msg_tx, aux);
 
     strcat(msg_tx, "R");
 
-    if((int) pout > 0) strcat(msg_tx, "+");
-    else if((int) pout < 0) strcat(msg_tx, "-");
+    if((int) qout >= 0) strcat(msg_tx, "+");
+    else if((int) qout < 0) strcat(msg_tx, "-");
     else strcat(msg_tx, "0");
 
     sprintf(aux, "%d", (int) abs(qout));
@@ -1320,54 +1325,72 @@ void TxBufferAqu(void)
 
     len_msg = strlen(msg_tx);
 
+    if(len_msg < 19)
+    {
+        for(i=0; i<(19-len_msg); i++)
+            strcat(msg_tx, "-");
+    }
+
 }
 
 // Rx funtion
 void RxBufferAqu(void)
 {
-    // int ant = 0;
-    // char aux[4] = {0, 0, 0, 0};
+    Uint16 rstart = 0;
+    Uint16 aq1 = 0;
+    Uint16 aq2 = 0;
+    char aux[5] = {0, 0, 0, 0, 0};
+    char aux2[5] = {0, 0, 0, 0, 0};
+    Uint16 k = 0;
+    Uint16 i = 0;
+    Uint16 j = 0;
 
-    // int i = 0;
-    // for(i=0; i < 8; i++)
-    // {
-    //     msg_rx[i] = rdata[i];  // Read data
-    // }
-    // i = 0;
-    // while (1)
-    // {
-    //     if (msg_rx[i] == 70 || i == 50) break;
-    //     if (ant == 65)
-    //     {
-    //         int j = 0;
-    //         while(msg_rx[i] != 82 || i == 50)
-    //         {
-    //             aux[j] = msg_rx[i];
-    //             j += 1;
-    //             i += 1;
-    //         }
-    //         scitx->pref = strtol(aux, NULL, 10);
-    //     }
+    while (1)
+    {
+        if (msg_rx[i] == 73 && rstart == 0)
+        {
+            rstart = 1;
+        }
+        if(rstart == 1)
+        {
+            if(msg_rx[i] == 83) break;
 
-    //     if (ant == 82)
-    //     {
-    //         int j = 0;
-    //         while(msg_rx[i] != 70 || i == 50)
-    //         {
-    //             aux[j] = msg_rx[i];
-    //             j += 1;
-    //             i += 1;
-    //         }
-    //         scitx->qref = strtol(aux, NULL, 10);
-    //     }
-       
-    //     ant = msg_rx[i];
-    //     i += 1;
-    // }
-    // free(aux);
-    // printf("%d\n", scitx->pref);
-    // printf("%d\n", scitx->qref);
+            if(aq1==1)
+            {
+                aux[j] = msg_rx[i];
+                j += 1;
+            }
 
+            if(aq2==1)
+            {
+                aux2[j] = msg_rx[i];
+                j += 1;
+            }
+
+            if(msg_rx[i] == 65) 
+            {
+                aq1 = 1;
+                j = 0;
+
+            }
+            if(msg_rx[i] == 82) 
+            {
+                aq2 = 1;
+                aq1 = 0;
+                j = 0;
+            }   
+        }  
+
+        i += 1;
+        k += 1;
+
+        if(i>=19) i = 0;
+
+        if(k>=50) break;
+    }
+
+    pref = strtol(aux, NULL, 10);
+    qref = strtol(aux2, NULL, 10);
 }
 
 /////////////////////////////////////System Fucntions//////////////////////////////////////////
