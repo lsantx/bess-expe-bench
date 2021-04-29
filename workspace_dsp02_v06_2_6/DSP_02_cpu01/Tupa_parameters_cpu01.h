@@ -12,9 +12,7 @@
 // SCI Definitions
 #define CPU_FREQ        200E6
 #define LSPCLK_FREQ     CPU_FREQ/4
-#define SCI_FREQ        2700           // SCI Assync Baud (Baud rate). A frequencia da
-// interrupção vai depender do número de palavras no FIfo. Por exemplo, se Fifo = 3
-// posições, a frequência da interrupção do fifo será SCI_FREQ/(Fifo*10)
+#define SCI_FREQ        2700           // SCI Assync Baud (Baud rate). The frequency of the interruption will depend on the number of words in FIfo. For example, if Fifo = 3 positions, the fifo interruption frequency is SCI_FREQ/(Fifo*10)
 #define SCI_PRD         ((LSPCLK_FREQ/(SCI_FREQ*8))-1)
 
 //Constantes

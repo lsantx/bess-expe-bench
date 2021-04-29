@@ -695,7 +695,6 @@ interrupt void IPC1_INT(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
-// adca1_isr - Read ADC Buffer in ISR
 interrupt void adcb1_isr(void)
 {
     GpioDataRegs.GPBSET.bit.GPIO62 = 1;                            // GPIO para verificar a freq de amostragem

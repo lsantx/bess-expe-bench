@@ -245,8 +245,6 @@ void ConfigureEPWM(void)
     EPwm10Regs.DBFED.bit.DBFED = 100; // Dead-band for falling-edge (100TBCLKs = 1us)
     EPwm10Regs.DBRED.bit.DBRED = 100; // Dead-band for rising-edge (100TBCLKs = 1us)
     */
-
-    EDIS;
 }
 
 void GPIO_Configure()
@@ -558,8 +556,6 @@ void GPIO_Configure()
     EDIS;
 }
 
-// scia_fifo_init - Configure SCIA FIFO
-//
 void scia_fifo_init(void)
 {
    SciaRegs.SCICCR.all = 0x0007;      // 1 stop bit,  No loopback
@@ -571,7 +567,7 @@ void scia_fifo_init(void)
    SciaRegs.SCICTL2.bit.RXBKINTENA = 1;
    SciaRegs.SCIHBAUD.all = ((uint16_t)SCI_PRD  & 0xFF00U) >> 8U;
    SciaRegs.SCILBAUD.all = (uint16_t)SCI_PRD  & 0x00FFU;
-//   SciaRegs.SCICCR.bit.LOOPBKENA = 0; // Enable loop back
+//   SciaRegs.SCICCR.bit.LOOPBKENA = 1; // Enable loop back
    SciaRegs.SCIFFTX.all = 0xC023;
    SciaRegs.SCIFFRX.all = 0x023;
    SciaRegs.SCIFFCT.all = 0x00;
