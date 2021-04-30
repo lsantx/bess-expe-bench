@@ -381,9 +381,9 @@ float pout = 4000.54;
 float qout = 1000.54;
 float soc = 25.4;
 Uint16 i = 0;
-char msg_tx[19];
-char msg_rx[19];
-char reset[19] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+char msg_tx[len_sci];
+char msg_rx[len_sci];
+char reset[len_sci] = {0, 0, 0, 0, 0, 0, 0, 0};
 Uint16 len_tx = 0;
 Uint16 sdataA[8];    // Send data for SCI-A
 Uint16 rdataA[8];    // Received data for SCI-A
@@ -945,7 +945,7 @@ interrupt void adcb1_isr(void)
            TxBufferAqu();
        }
 
-       if(Counts.count10 == 10000)
+       if(Counts.count10 == 1000)
        {
            Counts.count10 = 0;
            RxBufferAqu();
@@ -958,7 +958,7 @@ interrupt void adcb1_isr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Clear the flag for the interruption of the corresponding line. If you do not do this, a new interruption does not occur
 }
 
-// sciaTxFifoIsr - SCIA Transmit FIFO ISR
+// sciaTxFifoIsr - SCIA Transmit FIFO ISR - IA+9999R+9999S9999F
 interrupt void sciaTxFifoIsr(void)
 {
     // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
@@ -974,7 +974,7 @@ interrupt void sciaTxFifoIsr(void)
         sdataA[i] = msg_tx[send_inter];
         send_inter += 1;
 
-        if(send_inter>=19) send_inter = 0;
+        if(send_inter>=len_sci) send_inter = 0;
     }
 
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -999,7 +999,7 @@ interrupt void sciaRxFifoIsr(void)
         msg_rx[send_inter] = rdataA[i];
         send_inter += 1;
 
-        if(send_inter>=19) send_inter = 0;
+        if(send_inter>=len_sci) send_inter = 0;
     }
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
@@ -1324,9 +1324,9 @@ void TxBufferAqu(void)
 
     len_msg = strlen(msg_tx);
 
-    if(len_msg < 19)
+    if(len_msg < len_sci)
     {
-        for(i=0; i<(19-len_msg); i++)
+        for(i=0; i<(len_sci-len_msg); i++)
             strcat(msg_tx, "-");
     }
 
@@ -1383,7 +1383,7 @@ void RxBufferAqu(void)
         i += 1;
         k += 1;
 
-        if(i>=19) i = 0;
+        if(i>=len_sci) i = 0;
 
         if(k>=50) break;
     }

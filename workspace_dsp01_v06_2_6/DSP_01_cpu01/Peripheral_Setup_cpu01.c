@@ -245,8 +245,6 @@ void ConfigureEPWM(void)
     EPwm10Regs.DBFED.bit.DBFED = 100; // Dead-band for falling-edge (100TBCLKs = 1us)
     EPwm10Regs.DBRED.bit.DBRED = 100; // Dead-band for rising-edge (100TBCLKs = 1us)
     */
-
-    EDIS;
 }
 
 void GPIO_Configure()
