@@ -291,9 +291,10 @@ typedef struct{
     Uint32 count8;
     Uint32 count9;
     Uint16 count10;
+    Uint16 count11;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //Variables to send data from CPU1 to CPU2
@@ -938,18 +939,13 @@ interrupt void adcb1_isr(void)
        //EPwm9Regs.CMPA.bit.CMPA = sv_grid.Tb;
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
 
-       Counts.count10 += 1;
+    //    Counts.count10 += 1;
 
-       if(Counts.count10 == 1000)
-       {
-           TxBufferAqu();
-       }
-
-       if(Counts.count10 == 1000)
-       {
-           Counts.count10 = 0;
-           RxBufferAqu();
-       }
+    //    if(Counts.count10 == 1000)
+    //    {
+    //        Counts.count10 = 0;
+    //        TxBufferAqu();
+    //    }
     }
 
     GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -964,17 +960,17 @@ interrupt void sciaTxFifoIsr(void)
     // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
     Uint16 i;
 
-    for(i=0; i < 8; i++)
+    for(i=0; i < len_sci; i++)
     {
        SciaRegs.SCITXBUF.all=sdataA[i];  // Send data
     }
 
-    for(i=0; i<8; i++)
-    {
-        sdataA[i] = msg_tx[send_inter];
-        send_inter += 1;
+    Counts.count11 += 1;
+    TxBufferAqu();
 
-        if(send_inter>=len_sci) send_inter = 0;
+    for (i=0; i<len_sci; i++)
+    {
+        sdataA[i] = msg_tx[i];
     }
 
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -994,13 +990,12 @@ interrupt void sciaRxFifoIsr(void)
        rdataA[i]=SciaRegs.SCIRXBUF.all;  // Read data
     }
 
-    for(i=0; i<8; i++)
+    for (i=0; i<len_sci; i++)
     {
-        msg_rx[send_inter] = rdataA[i];
-        send_inter += 1;
-
-        if(send_inter>=len_sci) send_inter = 0;
+        msg_rx[i] = rdataA[i];
     }
+
+    RxBufferAqu();
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
@@ -1286,41 +1281,64 @@ void TxBufferAqu(void)
     char aux[4] = {0, 0, 0, 0};
     Uint16 i = 0;
 
-    strcpy(msg_tx, reset);
+    if (Counts.count11 == 1)
+    {
+        strcpy(msg_tx, reset);
 
-    strcat(msg_tx, "I");
-    strcat(msg_tx, "A");
+        strcat(msg_tx, "I");
 
-    
-    if((int) pout >= 0) strcat(msg_tx, "+");
-    else if((int) pout < 0) strcat(msg_tx, "-");
-    else strcat(msg_tx, "0");
+        strcat(msg_tx, "A");
 
-    sprintf(aux, "%d", (int) abs(pout));
-    strcat(msg_tx, aux);
+        if((int) pout >= 0) strcat(msg_tx, "+");
+        else if((int) pout < 0) strcat(msg_tx, "-");
+        else strcat(msg_tx, "0");
 
-    strcat(msg_tx, "R");
+        sprintf(aux, "%d", (int) abs(pout));
+        strcat(msg_tx, aux);
 
-    if((int) qout >= 0) strcat(msg_tx, "+");
-    else if((int) qout < 0) strcat(msg_tx, "-");
-    else strcat(msg_tx, "0");
+        strcat(msg_tx, "F");
+    }
 
-    sprintf(aux, "%d", (int) abs(qout));
-    strcat(msg_tx, aux);
+    if (Counts.count11 == 2)
+    {
+        strcpy(msg_tx, reset);
 
-    strcat(msg_tx, "S");
+        strcat(msg_tx, "I");
 
-    int n_decimal_points_precision = 100;
-    int integerPart = (int)soc;
-    int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
+        strcat(msg_tx, "R");
 
-    sprintf(aux, "%d", integerPart);
-    strcat(msg_tx, aux);
+        if((int) qout >= 0) strcat(msg_tx, "+");
+        else if((int) qout < 0) strcat(msg_tx, "-");
+        else strcat(msg_tx, "0");
 
-    sprintf(aux, "%d", decimalPart);
-    strcat(msg_tx, aux);
+        sprintf(aux, "%d", (int) abs(qout));
+        strcat(msg_tx, aux);
 
-    strcat(msg_tx, "F");
+        strcat(msg_tx, "F");
+    }
+
+    if (Counts.count11 == 3)
+    {
+        strcpy(msg_tx, reset);
+
+        strcat(msg_tx, "I");
+
+        strcat(msg_tx, "S");
+
+        int n_decimal_points_precision = 100;
+        int integerPart = (int)soc;
+        int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
+
+        sprintf(aux, "%d", integerPart);
+        strcat(msg_tx, aux);
+
+        sprintf(aux, "%d", decimalPart);
+        strcat(msg_tx, aux);
+
+        strcat(msg_tx, "F");
+
+        Counts.count11 = 0;
+    }
 
     len_msg = strlen(msg_tx);
 
@@ -1375,7 +1393,6 @@ void RxBufferAqu(void)
             if(msg_rx[i] == 82) 
             {
                 aq2 = 1;
-                aq1 = 0;
                 j = 0;
             }   
         }  
@@ -1388,8 +1405,8 @@ void RxBufferAqu(void)
         if(k>=50) break;
     }
 
-    pref = strtol(aux, NULL, 10);
-    qref = strtol(aux2, NULL, 10);
+    if (aq1 == 1) pref = strtol(aux, NULL, 10);
+    if (aq2 == 1) qref = strtol(aux2, NULL, 10);
 }
 
 /////////////////////////////////////System Fucntions//////////////////////////////////////////
