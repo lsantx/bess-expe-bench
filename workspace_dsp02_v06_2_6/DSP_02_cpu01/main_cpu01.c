@@ -391,6 +391,7 @@ Uint16 rdataA[8];    // Received data for SCI-A
 Uint16 send_inter = 0;
 Uint16 receiv_inter = 0;
 Uint16 len_msg = 0;
+Uint16 reset_sci = 0;
 
 //Main
 void main(void)
@@ -946,6 +947,18 @@ interrupt void adcb1_isr(void)
     //        Counts.count10 = 0;
     //        TxBufferAqu();
     //    }
+       if (reset_sci == 1)
+       {
+           SciaRegs.SCIFFTX.bit.TXFIFORESET = 0;
+           SciaRegs.SCIFFRX.bit.RXFIFORESET = 0;
+           SciaRegs.SCIFFTX.bit.SCIRST = 0;
+       }
+       else
+       {
+           SciaRegs.SCIFFTX.bit.TXFIFORESET = 1;
+           SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
+           SciaRegs.SCIFFTX.bit.SCIRST = 1;
+       }
     }
 
     GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
