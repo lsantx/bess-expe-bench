@@ -992,7 +992,7 @@ interrupt void sciaRxFifoIsr(void)
 
     for (i=0; i<len_sci; i++)
     {
-        msg_rx[i] = sdataA[i];
+        msg_rx[i] = rdataA[i];
     }
 
     RxBufferAqu();
