@@ -291,7 +291,7 @@ typedef struct{
     Uint32 count8;
     Uint32 count9;
     Uint16 count10;
-    Uint16 count11;
+    int16 count11;
 }counts;
 
 #define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
@@ -1294,7 +1294,7 @@ void TxBufferAqu(void)
     char aux[4] = {0, 0, 0, 0};
     Uint16 i = 0;
 
-    if (Counts.count11 == 1)
+    if (Counts.count11 == 0)
     {
         strcpy(msg_tx, reset);
 
@@ -1312,7 +1312,7 @@ void TxBufferAqu(void)
         strcat(msg_tx, "F");
     }
 
-    if (Counts.count11 == 2)
+    if (Counts.count11 == 100)
     {
         strcpy(msg_tx, reset);
 
@@ -1330,7 +1330,7 @@ void TxBufferAqu(void)
         strcat(msg_tx, "F");
     }
 
-    if (Counts.count11 == 3)
+    if (Counts.count11 == 200)
     {
         strcpy(msg_tx, reset);
 
@@ -1350,7 +1350,7 @@ void TxBufferAqu(void)
 
         strcat(msg_tx, "F");
 
-        Counts.count11 = 0;
+        Counts.count11 = -100;
     }
 
     len_msg = strlen(msg_tx);
