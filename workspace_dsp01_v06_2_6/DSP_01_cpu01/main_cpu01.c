@@ -947,7 +947,7 @@ interrupt void adcb1_isr(void)
     //        Counts.count10 = 0;
     //        TxBufferAqu();
     //    }
-        if (reset_sci == 1)
+        if ((reset_sci == 1) || (SciaRegs.SCIRXST.all != 0x0000))
         {
           SciaRegs.SCIFFTX.bit.TXFIFORESET = 0;
           SciaRegs.SCIFFRX.bit.RXFIFORESET = 0;
