@@ -323,7 +323,8 @@ typedef struct{
 #define SCI_DEFAULTS {0,0}
 Ssci scia_p = SCI_DEFAULTS;
 Ssci scia_q = SCI_DEFAULTS;
-
+Ssci scia_check1 = SCI_DEFAULTS;
+Ssci scia_check2 = SCI_DEFAULTS;
 
 ///////////////////////////////////////////// Functions ////////////////////////////////////////
 // Control
@@ -344,6 +345,7 @@ void TUPA_Ramp(Ramp *);
 void TUPA_Second_order_filter(sFilter2nd *);
 void TxBufferAqu(void);
 int RxBufferAqu(Ssci *);
+int sumAscii(char *string, int len);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
 //Variable for offset adjustment
@@ -388,6 +390,8 @@ Uint32 N_amostras = 60000;
 // SCI parameters
 int pref = 0;
 int qref = 0;
+int check1 = 0;
+int check2 = 0;
 float pout = 4000.54;
 float qout = 1000.54;
 float soc = 25.4;
@@ -402,6 +406,7 @@ Uint16 send_inter = 0;
 Uint16 receiv_inter = 0;
 Uint16 len_msg = 0;
 Uint16 reset_sci = 0;
+Uint16 soma_tx = 0;
 
 //Main
 void main(void)
@@ -1021,8 +1026,14 @@ interrupt void sciaRxFifoIsr(void)
     scia_p.asci = 65;
     pref = RxBufferAqu(&scia_p);
 
+    scia_check1.asci = 67;
+    check1 = RxBufferAqu(&scia_check1);
+
     scia_q.asci = 82;
     qref = RxBufferAqu(&scia_q);
+
+    scia_check2.asci = 67;
+    check2 = RxBufferAqu(&scia_check2);
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
@@ -1306,6 +1317,7 @@ void TUPA_Ramp(Ramp *rmp)
 void TxBufferAqu(void)
 {
     char aux[4] = {0, 0, 0, 0};
+    char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Uint16 i = 0;
 
     if (Counts.count11 == 0)
@@ -1322,6 +1334,22 @@ void TxBufferAqu(void)
 
         sprintf(aux, "%d", (int) abs(pout));
         strcat(msg_tx, aux);
+
+        strcat(msg_tx, "F");
+
+        soma_tx = sumAscii(msg_tx, 8);
+    }
+
+    if (Counts.count11 == 20)
+    {
+        strcpy(msg_tx, reset);
+
+        strcat(msg_tx, "I");
+
+        strcat(msg_tx, "C");
+
+        sprintf(aux2, "%d", (int) abs(soma_tx));
+        strcat(msg_tx, aux2);
 
         strcat(msg_tx, "F");
     }
@@ -1347,6 +1375,22 @@ void TxBufferAqu(void)
 
         sprintf(aux, "%d", (int) abs(qout));
         strcat(msg_tx, aux);
+
+        strcat(msg_tx, "F");
+
+        soma_tx = sumAscii(msg_tx, 8);
+    }
+
+    if (Counts.count11 == 70)
+    {
+        strcpy(msg_tx, reset);
+
+        strcat(msg_tx, "I");
+
+        strcat(msg_tx, "C");
+
+        sprintf(aux2, "%d", (int) abs(soma_tx));
+        strcat(msg_tx, aux2);
 
         strcat(msg_tx, "F");
     }
@@ -1439,6 +1483,18 @@ int RxBufferAqu(Ssci *sci)
     if (aq1 == 1) sci->sci_out = strtol(aux, NULL, 10);
 
     return sci->sci_out;
+}
+
+int sumAscii(char *string, int len)
+{
+    int sum = 0;
+    int j = 0;
+
+    for (j = 0; j < len; j++)
+    {
+        sum = sum + string[j];
+    }
+    return sum;
 }
 
 /////////////////////////////////////System Fucntions//////////////////////////////////////////
