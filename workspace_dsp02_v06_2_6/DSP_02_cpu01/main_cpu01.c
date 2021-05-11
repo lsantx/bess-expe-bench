@@ -315,6 +315,16 @@ typedef struct{
 #define RECV_DEFAULTS {0,0}
 SrecvCPU2toCPU1 Recv = RECV_DEFAULTS;
 
+typedef struct{
+    int sci_out;
+    Uint16 asci;
+}Ssci;
+
+#define SCI_DEFAULTS {0,0}
+Ssci scia_p = SCI_DEFAULTS;
+Ssci scia_q = SCI_DEFAULTS;
+
+
 ///////////////////////////////////////////// Functions ////////////////////////////////////////
 // Control
 void TUPA_abc2alfabeta(sABC *, sAlfaBeta *);
@@ -333,7 +343,7 @@ void TUPA_PR(sPR *);
 void TUPA_Ramp(Ramp *);
 void TUPA_Second_order_filter(sFilter2nd *);
 void TxBufferAqu(void);
-void RxBufferAqu(void);
+int RxBufferAqu(Ssci *);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
 //Variable for offset adjustment
@@ -1008,7 +1018,11 @@ interrupt void sciaRxFifoIsr(void)
         msg_rx[i] = rdataA[i];
     }
 
-    RxBufferAqu();
+    scia_p.asci = 65;
+    pref = RxBufferAqu(&scia_p);
+
+    scia_q.asci = 82;
+    qref = RxBufferAqu(&scia_q);
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
@@ -1312,7 +1326,14 @@ void TxBufferAqu(void)
         strcat(msg_tx, "F");
     }
 
-    if (Counts.count11 == 100)
+    if (Counts.count11 == 25)
+    {
+        strcpy(msg_tx, reset);
+
+        strcat(msg_tx, "--------");
+    }
+
+    if (Counts.count11 == 50)
     {
         strcpy(msg_tx, reset);
 
@@ -1330,7 +1351,14 @@ void TxBufferAqu(void)
         strcat(msg_tx, "F");
     }
 
-    if (Counts.count11 == 200)
+    if (Counts.count11 == 75)
+    {
+        strcpy(msg_tx, reset);
+
+        strcat(msg_tx, "--------");
+    }
+
+    if (Counts.count11 == 100)
     {
         strcpy(msg_tx, reset);
 
@@ -1349,9 +1377,14 @@ void TxBufferAqu(void)
         strcat(msg_tx, aux);
 
         strcat(msg_tx, "F");
-
-        Counts.count11 = -100;
     }
+
+    if (Counts.count11 == 125)
+        {
+            strcpy(msg_tx, reset);
+            strcat(msg_tx, "--------");
+            Counts.count11 = -25;
+        }
 
     len_msg = strlen(msg_tx);
 
@@ -1364,13 +1397,11 @@ void TxBufferAqu(void)
 }
 
 // Rx funtion
-void RxBufferAqu(void)
+int RxBufferAqu(Ssci *sci)
 {
     Uint16 rstart = 0;
     Uint16 aq1 = 0;
-    Uint16 aq2 = 0;
     char aux[5] = {0, 0, 0, 0, 0};
-    char aux2[5] = {0, 0, 0, 0, 0};
     Uint16 k = 0;
     Uint16 i = 0;
     Uint16 j = 0;
@@ -1383,31 +1414,18 @@ void RxBufferAqu(void)
         }
         if(rstart == 1)
         {
-            if(msg_rx[i] == 83) break;
+            if(msg_rx[i] == 70) break;
 
             if(aq1==1)
             {
                 aux[j] = msg_rx[i];
                 j += 1;
             }
-
-            if(aq2==1)
-            {
-                aux2[j] = msg_rx[i];
-                j += 1;
-            }
-
-            if(msg_rx[i] == 65) 
+            if(msg_rx[i] == sci->asci)
             {
                 aq1 = 1;
                 j = 0;
-
             }
-            if(msg_rx[i] == 82) 
-            {
-                aq2 = 1;
-                j = 0;
-            }   
         }  
 
         i += 1;
@@ -1418,8 +1436,9 @@ void RxBufferAqu(void)
         if(k>=50) break;
     }
 
-    if (aq1 == 1) pref = strtol(aux, NULL, 10);
-    if (aq2 == 1) qref = strtol(aux2, NULL, 10);
+    if (aq1 == 1) sci->sci_out = strtol(aux, NULL, 10);
+
+    return sci->sci_out;
 }
 
 /////////////////////////////////////System Fucntions//////////////////////////////////////////
