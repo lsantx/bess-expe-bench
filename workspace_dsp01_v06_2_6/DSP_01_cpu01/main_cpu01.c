@@ -408,6 +408,7 @@ Uint16 receiv_inter = 0;
 Uint16 len_msg = 0;
 Uint16 reset_sci = 0;
 Uint16 soma_tx = 0;
+
 //Main
 void main(void)
 {
@@ -1012,6 +1013,9 @@ interrupt void sciaTxFifoIsr(void)
 interrupt void sciaRxFifoIsr(void)
 {
     Uint16 i;
+    Uint16 soma_rx = 0;
+    int pref_temp = 0;
+    int qref_temp = 0;
 
     for(i=0;i<8;i++)
     {
@@ -1024,16 +1028,21 @@ interrupt void sciaRxFifoIsr(void)
     }
 
     scia_p.asci = 65;
-    pref = RxBufferAqu(&scia_p);
+    pref_temp = RxBufferAqu(&scia_p);
 
     scia_check1.asci = 67;
     check1 = RxBufferAqu(&scia_check1);
 
     scia_q.asci = 82;
-    qref = RxBufferAqu(&scia_q);
+    qref_temp = RxBufferAqu(&scia_q);
 
-    scia_check2.asci = 67;
+    scia_check2.asci = 68;
     check2 = RxBufferAqu(&scia_check2);
+
+    soma_rx = sumAscii(msg_rx, (int) len_sci);
+
+    if (check1 == soma_rx) pref = pref_temp;
+    if (check2 == soma_rx) qref = qref_temp;
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
@@ -1337,7 +1346,15 @@ void TxBufferAqu(void)
 
         strcat(msg_tx, "F");
 
-        soma_tx = sumAscii(msg_tx, 8);
+        len_msg = strlen(msg_tx);
+
+        if(len_msg < len_sci)
+        {
+            for(i=0; i<(len_sci-len_msg); i++)
+                strcat(msg_tx, "-");
+        }
+
+        soma_tx = sumAscii(msg_tx, (int) len_sci);
     }
 
     if (Counts.count11 == 20)
@@ -1352,6 +1369,14 @@ void TxBufferAqu(void)
         strcat(msg_tx, aux2);
 
         strcat(msg_tx, "F");
+
+        len_msg = strlen(msg_tx);
+
+        if(len_msg < len_sci)
+        {
+            for(i=0; i<(len_sci-len_msg); i++)
+                strcat(msg_tx, "-");
+        }
     }
 
     if (Counts.count11 == 50)
@@ -1371,7 +1396,15 @@ void TxBufferAqu(void)
 
         strcat(msg_tx, "F");
 
-        soma_tx = sumAscii(msg_tx, 8);
+        len_msg = strlen(msg_tx);
+
+        if(len_msg < len_sci)
+        {
+            for(i=0; i<(len_sci-len_msg); i++)
+                strcat(msg_tx, "-");
+        }
+
+        soma_tx = sumAscii(msg_tx, (int) len_sci);
     }
 
     if (Counts.count11 == 70)
@@ -1380,19 +1413,20 @@ void TxBufferAqu(void)
 
         strcat(msg_tx, "I");
 
-        strcat(msg_tx, "C");
+        strcat(msg_tx, "D");
 
         sprintf(aux2, "%d", (int) abs(soma_tx));
         strcat(msg_tx, aux2);
 
         strcat(msg_tx, "F");
-    }
 
-    if (Counts.count11 == 75)
-    {
-        strcpy(msg_tx, reset);
+        len_msg = strlen(msg_tx);
 
-        strcat(msg_tx, "--------");
+        if(len_msg < len_sci)
+        {
+            for(i=0; i<(len_sci-len_msg); i++)
+                strcat(msg_tx, "-");
+        }
     }
 
     if (Counts.count11 == 100)
@@ -1414,25 +1448,17 @@ void TxBufferAqu(void)
         strcat(msg_tx, aux);
 
         strcat(msg_tx, "F");
-    }
 
-    if (Counts.count11 == 125)
-    {
-        strcpy(msg_tx, reset);
+        len_msg = strlen(msg_tx);
 
-        strcat(msg_tx, "--------");
+        if(len_msg < len_sci)
+        {
+            for(i=0; i<(len_sci-len_msg); i++)
+                strcat(msg_tx, "-");
+        }
 
         Counts.count11 = -25;
     }
-
-    len_msg = strlen(msg_tx);
-
-    if(len_msg < len_sci)
-    {
-        for(i=0; i<(len_sci-len_msg); i++)
-            strcat(msg_tx, "-");
-    }
-
 }
 
 // Rx funtion
