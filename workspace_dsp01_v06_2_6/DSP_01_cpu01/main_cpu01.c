@@ -316,16 +316,18 @@ typedef struct{
 SrecvCPU2toCPU1 Recv = RECV_DEFAULTS;
 
 typedef struct{
-    int sci_out;
+    float sci_out;
     Uint16 asci;
-    int check;
+    bool decimal;
 }Ssci;
 
-#define SCI_DEFAULTS {0,0,0}
+#define SCI_DEFAULTS {0,0,false}
 Ssci scia_p = SCI_DEFAULTS;
 Ssci scia_q = SCI_DEFAULTS;
+Ssci scia_soc = SCI_DEFAULTS;
 Ssci scia_check1 = SCI_DEFAULTS;
 Ssci scia_check2 = SCI_DEFAULTS;
+Ssci scia_check3 = SCI_DEFAULTS;
 
 ///////////////////////////////////////////// Functions ////////////////////////////////////////
 // Control
@@ -345,7 +347,7 @@ void TUPA_PR(sPR *);
 void TUPA_Ramp(Ramp *);
 void TUPA_Second_order_filter(sFilter2nd *);
 void TxBufferAqu(void);
-int RxBufferAqu(Ssci *);
+float RxBufferAqu(Ssci *);
 int sumAscii(char *string, int len);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
@@ -389,10 +391,12 @@ Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0; Uint32 sum_CH4 = 0; 
 Uint32 N_amostras = 60000;
 
 // SCI parameters
-int pref = 0;
-int qref = 0;
-int check1 = 0;
-int check2 = 0;
+float pref = 0;
+float qref = 0;
+float socref = 0;
+float check1 = 0;
+float check2 = 0;
+float check3 = 0;
 float pout = 4000.54;
 float qout = 1000.54;
 float soc = 25.4;
@@ -1014,8 +1018,9 @@ interrupt void sciaRxFifoIsr(void)
 {
     Uint16 i;
     Uint16 soma_rx = 0;
-    int pref_temp = 0;
-    int qref_temp = 0;
+    float pref_temp = 0;
+    float qref_temp = 0;
+    float soc_temp = 0;
 
     for(i=0;i<8;i++)
     {
@@ -1028,21 +1033,34 @@ interrupt void sciaRxFifoIsr(void)
     }
 
     scia_p.asci = 65;
+    scia_p.decimal = false;
     pref_temp = RxBufferAqu(&scia_p);
 
-    scia_check1.asci = 67;
+    scia_check1.asci = 67;               // C
+    scia_check1.decimal = false;
     check1 = RxBufferAqu(&scia_check1);
 
     scia_q.asci = 82;
+    scia_q.decimal = false;
     qref_temp = RxBufferAqu(&scia_q);
 
-    scia_check2.asci = 68;
+    scia_check2.asci = 68;             // D
+    scia_check2.decimal = false;
     check2 = RxBufferAqu(&scia_check2);
+
+    scia_soc.asci = 83;
+    scia_soc.decimal = true;
+    soc_temp = RxBufferAqu(&scia_soc);
+
+    scia_check3.asci = 79;             // O
+    scia_check3.decimal = false;
+    check3 = RxBufferAqu(&scia_check3);
 
     soma_rx = sumAscii(msg_rx, (int) len_sci);
 
-    if (check1 == soma_rx) pref = pref_temp;
-    if (check2 == soma_rx) qref = qref_temp;
+    if ((int) check1 == soma_rx)   pref = pref_temp;
+    if ((int) check2 == soma_rx)   qref = qref_temp;
+    if ((int) check3 == soma_rx) socref = soc_temp;
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
@@ -1379,7 +1397,7 @@ void TxBufferAqu(void)
         }
     }
 
-    if (Counts.count11 == 50)
+    if (Counts.count11 == 40)
     {
         strcpy(msg_tx, reset);
 
@@ -1407,7 +1425,7 @@ void TxBufferAqu(void)
         soma_tx = sumAscii(msg_tx, (int) len_sci);
     }
 
-    if (Counts.count11 == 70)
+    if (Counts.count11 == 60)
     {
         strcpy(msg_tx, reset);
 
@@ -1429,7 +1447,7 @@ void TxBufferAqu(void)
         }
     }
 
-    if (Counts.count11 == 100)
+    if (Counts.count11 == 80)
     {
         strcpy(msg_tx, reset);
 
@@ -1444,6 +1462,8 @@ void TxBufferAqu(void)
         sprintf(aux, "%d", integerPart);
         strcat(msg_tx, aux);
 
+        strcat(msg_tx, ".");
+
         sprintf(aux, "%d", decimalPart);
         strcat(msg_tx, aux);
 
@@ -1457,12 +1477,36 @@ void TxBufferAqu(void)
                 strcat(msg_tx, "-");
         }
 
-        Counts.count11 = -25;
+        soma_tx = sumAscii(msg_tx, (int) len_sci);
+    }
+
+    if (Counts.count11 == 100)
+    {
+        strcpy(msg_tx, reset);
+
+        strcat(msg_tx, "I");
+
+        strcat(msg_tx, "O");
+
+        sprintf(aux2, "%d", (int) abs(soma_tx));
+        strcat(msg_tx, aux2);
+
+        strcat(msg_tx, "F");
+
+        len_msg = strlen(msg_tx);
+
+        if(len_msg < len_sci)
+        {
+            for(i=0; i<(len_sci-len_msg); i++)
+                strcat(msg_tx, "-");
+        }
+
+        Counts.count11 = -20;
     }
 }
 
 // Rx funtion
-int RxBufferAqu(Ssci *sci)
+float RxBufferAqu(Ssci *sci)
 {
     Uint16 rstart = 0;
     Uint16 aq1 = 0;
@@ -1501,7 +1545,8 @@ int RxBufferAqu(Ssci *sci)
         if(k>=50) break;
     }
 
-    if (aq1 == 1) sci->sci_out = strtol(aux, NULL, 10);
+    if (aq1 == 1 && sci->decimal == false) sci->sci_out = strtol(aux, NULL, 10);
+    if (aq1 == 1 && sci->decimal == true) sci->sci_out = strtof(aux, NULL);
 
     return sci->sci_out;
 }
