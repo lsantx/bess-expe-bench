@@ -391,24 +391,20 @@ Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0; Uint32 sum_CH4 = 0; 
 Uint32 N_amostras = 60000;
 
 // SCI parameters
-float pref = 0;
-float qref = 0;
-float socref = 0;
+float prefA = 0;
+float qrefA = 0;
+float socrefA = 0;
 float check1 = 0;
 float check2 = 0;
 float check3 = 0;
 float pout = 4000.54;
 float qout = 1000.54;
 float soc = 25.4;
-Uint16 i = 0;
-char msg_tx[len_sci];
-char msg_rx[len_sci];
+char msg_txa[len_sci];
+char msg_rxa[len_sci];
 char reset[len_sci] = {0, 0, 0, 0, 0, 0, 0, 0};
-Uint16 len_tx = 0;
 Uint16 sdataA[8];    // Send data for SCI-A
 Uint16 rdataA[8];    // Received data for SCI-A
-Uint16 send_inter = 0;
-Uint16 receiv_inter = 0;
 Uint16 len_msg = 0;
 Uint16 reset_sci = 0;
 Uint16 soma_tx = 0;
@@ -1003,7 +999,7 @@ interrupt void sciaTxFifoIsr(void)
 
     for (i=0; i<len_sci; i++)
     {
-        sdataA[i] = msg_tx[i];
+        sdataA[i] = msg_txa[i];
     }
 
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -1029,7 +1025,7 @@ interrupt void sciaRxFifoIsr(void)
 
     for (i=0; i<len_sci; i++)
     {
-        msg_rx[i] = rdataA[i];
+        msg_rxa[i] = rdataA[i];
     }
 
     scia_p.asci = 65;
@@ -1056,11 +1052,11 @@ interrupt void sciaRxFifoIsr(void)
     scia_check3.decimal = false;
     check3 = RxBufferAqu(&scia_check3);
 
-    soma_rx = sumAscii(msg_rx, (int) len_sci);
+    soma_rx = sumAscii(msg_rxa, (int) len_sci);
 
-    if ((int) check1 == soma_rx)   pref = pref_temp;
-    if ((int) check2 == soma_rx)   qref = qref_temp;
-    if ((int) check3 == soma_rx) socref = soc_temp;
+    if ((int) check1 == soma_rx)   prefA = pref_temp;
+    if ((int) check2 == soma_rx)   qrefA = qref_temp;
+    if ((int) check3 == soma_rx) socrefA = soc_temp;
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
@@ -1349,156 +1345,156 @@ void TxBufferAqu(void)
 
     if (Counts.count11 == 0)
     {
-        strcpy(msg_tx, reset);
+        strcpy(msg_txa, reset);
 
-        strcat(msg_tx, "I");
+        strcat(msg_txa, "I");
 
-        strcat(msg_tx, "A");
+        strcat(msg_txa, "A");
 
-        if((int) pout >= 0) strcat(msg_tx, "+");
-        else if((int) pout < 0) strcat(msg_tx, "-");
-        else strcat(msg_tx, "0");
+        if((int) pout >= 0) strcat(msg_txa, "+");
+        else if((int) pout < 0) strcat(msg_txa, "-");
+        else strcat(msg_txa, "0");
 
         sprintf(aux, "%d", (int) abs(pout));
-        strcat(msg_tx, aux);
+        strcat(msg_txa, aux);
 
-        strcat(msg_tx, "F");
+        strcat(msg_txa, "F");
 
-        len_msg = strlen(msg_tx);
+        len_msg = strlen(msg_txa);
 
         if(len_msg < len_sci)
         {
             for(i=0; i<(len_sci-len_msg); i++)
-                strcat(msg_tx, "-");
+                strcat(msg_txa, "-");
         }
 
-        soma_tx = sumAscii(msg_tx, (int) len_sci);
+        soma_tx = sumAscii(msg_txa, (int) len_sci);
     }
 
     if (Counts.count11 == 20)
     {
-        strcpy(msg_tx, reset);
+        strcpy(msg_txa, reset);
 
-        strcat(msg_tx, "I");
+        strcat(msg_txa, "I");
 
-        strcat(msg_tx, "C");
+        strcat(msg_txa, "C");
 
         sprintf(aux2, "%d", (int) abs(soma_tx));
-        strcat(msg_tx, aux2);
+        strcat(msg_txa, aux2);
 
-        strcat(msg_tx, "F");
+        strcat(msg_txa, "F");
 
-        len_msg = strlen(msg_tx);
+        len_msg = strlen(msg_txa);
 
         if(len_msg < len_sci)
         {
             for(i=0; i<(len_sci-len_msg); i++)
-                strcat(msg_tx, "-");
+                strcat(msg_txa, "-");
         }
     }
 
     if (Counts.count11 == 40)
     {
-        strcpy(msg_tx, reset);
+        strcpy(msg_txa, reset);
 
-        strcat(msg_tx, "I");
+        strcat(msg_txa, "I");
 
-        strcat(msg_tx, "R");
+        strcat(msg_txa, "R");
 
-        if((int) qout >= 0) strcat(msg_tx, "+");
-        else if((int) qout < 0) strcat(msg_tx, "-");
-        else strcat(msg_tx, "0");
+        if((int) qout >= 0) strcat(msg_txa, "+");
+        else if((int) qout < 0) strcat(msg_txa, "-");
+        else strcat(msg_txa, "0");
 
         sprintf(aux, "%d", (int) abs(qout));
-        strcat(msg_tx, aux);
+        strcat(msg_txa, aux);
 
-        strcat(msg_tx, "F");
+        strcat(msg_txa, "F");
 
-        len_msg = strlen(msg_tx);
+        len_msg = strlen(msg_txa);
 
         if(len_msg < len_sci)
         {
             for(i=0; i<(len_sci-len_msg); i++)
-                strcat(msg_tx, "-");
+                strcat(msg_txa, "-");
         }
 
-        soma_tx = sumAscii(msg_tx, (int) len_sci);
+        soma_tx = sumAscii(msg_txa, (int) len_sci);
     }
 
     if (Counts.count11 == 60)
     {
-        strcpy(msg_tx, reset);
+        strcpy(msg_txa, reset);
 
-        strcat(msg_tx, "I");
+        strcat(msg_txa, "I");
 
-        strcat(msg_tx, "D");
+        strcat(msg_txa, "D");
 
         sprintf(aux2, "%d", (int) abs(soma_tx));
-        strcat(msg_tx, aux2);
+        strcat(msg_txa, aux2);
 
-        strcat(msg_tx, "F");
+        strcat(msg_txa, "F");
 
-        len_msg = strlen(msg_tx);
+        len_msg = strlen(msg_txa);
 
         if(len_msg < len_sci)
         {
             for(i=0; i<(len_sci-len_msg); i++)
-                strcat(msg_tx, "-");
+                strcat(msg_txa, "-");
         }
     }
 
     if (Counts.count11 == 80)
     {
-        strcpy(msg_tx, reset);
+        strcpy(msg_txa, reset);
 
-        strcat(msg_tx, "I");
+        strcat(msg_txa, "I");
 
-        strcat(msg_tx, "S");
+        strcat(msg_txa, "S");
 
         int n_decimal_points_precision = 100;
         int integerPart = (int)soc;
         int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
 
         sprintf(aux, "%d", integerPart);
-        strcat(msg_tx, aux);
+        strcat(msg_txa, aux);
 
-        strcat(msg_tx, ".");
+        strcat(msg_txa, ".");
 
         sprintf(aux, "%d", decimalPart);
-        strcat(msg_tx, aux);
+        strcat(msg_txa, aux);
 
-        strcat(msg_tx, "F");
+        strcat(msg_txa, "F");
 
-        len_msg = strlen(msg_tx);
+        len_msg = strlen(msg_txa);
 
         if(len_msg < len_sci)
         {
             for(i=0; i<(len_sci-len_msg); i++)
-                strcat(msg_tx, "-");
+                strcat(msg_txa, "-");
         }
 
-        soma_tx = sumAscii(msg_tx, (int) len_sci);
+        soma_tx = sumAscii(msg_txa, (int) len_sci);
     }
 
     if (Counts.count11 == 100)
     {
-        strcpy(msg_tx, reset);
+        strcpy(msg_txa, reset);
 
-        strcat(msg_tx, "I");
+        strcat(msg_txa, "I");
 
-        strcat(msg_tx, "O");
+        strcat(msg_txa, "O");
 
         sprintf(aux2, "%d", (int) abs(soma_tx));
-        strcat(msg_tx, aux2);
+        strcat(msg_txa, aux2);
 
-        strcat(msg_tx, "F");
+        strcat(msg_txa, "F");
 
-        len_msg = strlen(msg_tx);
+        len_msg = strlen(msg_txa);
 
         if(len_msg < len_sci)
         {
             for(i=0; i<(len_sci-len_msg); i++)
-                strcat(msg_tx, "-");
+                strcat(msg_txa, "-");
         }
 
         Counts.count11 = -20;
@@ -1517,20 +1513,20 @@ float RxBufferAqu(Ssci *sci)
 
     while (1)
     {
-        if (msg_rx[i] == 73 && rstart == 0)
+        if (msg_rxa[i] == 73 && rstart == 0)
         {
             rstart = 1;
         }
         if(rstart == 1)
         {
-            if(msg_rx[i] == 70) break;
+            if(msg_rxa[i] == 70) break;
 
             if(aq1==1)
             {
-                aux[j] = msg_rx[i];
+                aux[j] = msg_rxa[i];
                 j += 1;
             }
-            if(msg_rx[i] == sci->asci)
+            if(msg_rxa[i] == sci->asci)
             {
                 aq1 = 1;
                 j = 0;
