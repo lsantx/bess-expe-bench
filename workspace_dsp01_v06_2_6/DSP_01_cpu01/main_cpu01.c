@@ -333,6 +333,9 @@ typedef struct{
     float pref;
     float qref;
     float socref;
+    float check1;
+    float check2;
+    float check3;
     Uint16 soma_tx;
     Uint16 len_msg;
     int16 count;
@@ -342,8 +345,9 @@ typedef struct{
     Uint16 rdata[8];    // Received data
 }Ssci_mesg;
 
-#define SCI_MSG_DEFAULTS {0,0,0,0,0,0,{0},{0},{0},{0}}
+#define SCI_MSG_DEFAULTS {0,0,0,0,0,0,0,0,0,{0},{0},{0},{0}}
 Ssci_mesg sci_msgA = SCI_MSG_DEFAULTS;
+
 ///////////////////////////////////////////// Functions ////////////////////////////////////////
 // Control
 void TUPA_abc2alfabeta(sABC *, sAlfaBeta *);
@@ -406,9 +410,6 @@ Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0; Uint32 sum_CH4 = 0; 
 Uint32 N_amostras = 60000;
 
 // SCI parameters
-float check1 = 0;
-float check2 = 0;
-float check3 = 0;
 float pout = 4000.54;
 float qout = 1000.54;
 float soc = 25.4;
@@ -1039,7 +1040,7 @@ interrupt void sciaRxFifoIsr(void)
 
     scia_check1.asci = 67;               // C
     scia_check1.decimal = false;
-    check1 = RxBufferAqu(&scia_check1, &sci_msgA);
+    sci_msgA.check1 = RxBufferAqu(&scia_check1, &sci_msgA);
 
     scia_q.asci = 82;
     scia_q.decimal = false;
@@ -1047,7 +1048,7 @@ interrupt void sciaRxFifoIsr(void)
 
     scia_check2.asci = 68;             // D
     scia_check2.decimal = false;
-    check2 = RxBufferAqu(&scia_check2, &sci_msgA);
+    sci_msgA.check2 = RxBufferAqu(&scia_check2, &sci_msgA);
 
     scia_soc.asci = 83;
     scia_soc.decimal = true;
@@ -1055,13 +1056,13 @@ interrupt void sciaRxFifoIsr(void)
 
     scia_check3.asci = 79;             // O
     scia_check3.decimal = false;
-    check3 = RxBufferAqu(&scia_check3, &sci_msgA);
+    sci_msgA.check3 = RxBufferAqu(&scia_check3, &sci_msgA);
 
     soma_rx = sumAscii(sci_msgA.msg_rx, (int) len_sci);
 
-    if ((int) check1 == soma_rx)   sci_msgA.pref = pref_temp;
-    if ((int) check2 == soma_rx)   sci_msgA.qref = qref_temp;
-    if ((int) check3 == soma_rx) sci_msgA.socref = soc_temp;
+    if ((int) sci_msgA.check1 == soma_rx)   sci_msgA.pref = pref_temp;
+    if ((int) sci_msgA.check2 == soma_rx)   sci_msgA.qref = qref_temp;
+    if ((int) sci_msgA.check3 == soma_rx) sci_msgA.socref = soc_temp;
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
