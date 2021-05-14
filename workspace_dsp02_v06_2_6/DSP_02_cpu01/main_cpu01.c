@@ -334,13 +334,14 @@ typedef struct{
     float qref;
     float socref;
     Uint16 soma_tx;
+    Uint16 len_msg;
     char msg_tx[len_sci];
     char msg_rx[len_sci];
     Uint16 sdataA[8];    // Send data for SCI-A
     Uint16 rdataA[8];    // Received data for SCI-A
 }Ssci_mesg;
 
-#define SCI_MSG_DEFAULTS {0,0,0,0,{0},{0},{0},{0}}
+#define SCI_MSG_DEFAULTS {0,0,0,0,0,{0},{0},{0},{0}}
 Ssci_mesg scia_msgA = SCI_MSG_DEFAULTS;
 
 ///////////////////////////////////////////// Functions ////////////////////////////////////////
@@ -412,7 +413,6 @@ float pout = 4000.54;
 float qout = 1000.54;
 float soc = 25.4;
 char reset[len_sci] = {0, 0, 0, 0, 0, 0, 0, 0};
-Uint16 len_msg = 0;
 Uint16 reset_sci = 0;
 
 //Main
@@ -1366,11 +1366,11 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "F");
 
-        len_msg = strlen(sci->msg_tx);
+        sci->len_msg = strlen(sci->msg_tx);
 
-        if(len_msg < len_sci)
+        if(sci->len_msg < len_sci)
         {
-            for(i=0; i<(len_sci-len_msg); i++)
+            for(i=0; i<(len_sci-sci->len_msg); i++)
                 strcat(sci->msg_tx, "-");
         }
 
@@ -1390,11 +1390,11 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "F");
 
-        len_msg = strlen(sci->msg_tx);
+        sci->len_msg = strlen(sci->msg_tx);
 
-        if(len_msg < len_sci)
+        if(sci->len_msg < len_sci)
         {
-            for(i=0; i<(len_sci-len_msg); i++)
+            for(i=0; i<(len_sci-sci->len_msg); i++)
                 strcat(sci->msg_tx, "-");
         }
     }
@@ -1416,11 +1416,11 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "F");
 
-        len_msg = strlen(sci->msg_tx);
+        sci->len_msg = strlen(sci->msg_tx);
 
-        if(len_msg < len_sci)
+        if(sci->len_msg < len_sci)
         {
-            for(i=0; i<(len_sci-len_msg); i++)
+            for(i=0; i<(len_sci-sci->len_msg); i++)
                 strcat(sci->msg_tx, "-");
         }
 
@@ -1440,11 +1440,11 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "F");
 
-        len_msg = strlen(sci->msg_tx);
+        sci->len_msg = strlen(sci->msg_tx);
 
-        if(len_msg < len_sci)
+        if(sci->len_msg < len_sci)
         {
-            for(i=0; i<(len_sci-len_msg); i++)
+            for(i=0; i<(len_sci-sci->len_msg); i++)
                 strcat(sci->msg_tx, "-");
         }
     }
@@ -1471,11 +1471,11 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "F");
 
-        len_msg = strlen(sci->msg_tx);
+        sci->len_msg = strlen(sci->msg_tx);
 
-        if(len_msg < len_sci)
+        if(sci->len_msg < len_sci)
         {
-            for(i=0; i<(len_sci-len_msg); i++)
+            for(i=0; i<(len_sci-sci->len_msg); i++)
                 strcat(sci->msg_tx, "-");
         }
 
@@ -1495,11 +1495,11 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "F");
 
-        len_msg = strlen(sci->msg_tx);
+        sci->len_msg = strlen(sci->msg_tx);
 
-        if(len_msg < len_sci)
+        if(sci->len_msg < len_sci)
         {
-            for(i=0; i<(len_sci-len_msg); i++)
+            for(i=0; i<(len_sci-sci->len_msg); i++)
                 strcat(sci->msg_tx, "-");
         }
 
