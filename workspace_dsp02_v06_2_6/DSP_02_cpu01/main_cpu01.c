@@ -291,10 +291,9 @@ typedef struct{
     Uint32 count8;
     Uint32 count9;
     Uint16 count10;
-    int16 count11;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //Variables to send data from CPU1 to CPU2
@@ -335,14 +334,15 @@ typedef struct{
     float socref;
     Uint16 soma_tx;
     Uint16 len_msg;
+    int16 count;
     char msg_tx[len_sci];
     char msg_rx[len_sci];
-    Uint16 sdataA[8];    // Send data for SCI-A
-    Uint16 rdataA[8];    // Received data for SCI-A
+    Uint16 sdata[8];    // Send data
+    Uint16 rdata[8];    // Received data
 }Ssci_mesg;
 
-#define SCI_MSG_DEFAULTS {0,0,0,0,0,{0},{0},{0},{0}}
-Ssci_mesg scia_msgA = SCI_MSG_DEFAULTS;
+#define SCI_MSG_DEFAULTS {0,0,0,0,0,0,{0},{0},{0},{0}}
+Ssci_mesg sci_msgA = SCI_MSG_DEFAULTS;
 
 ///////////////////////////////////////////// Functions ////////////////////////////////////////
 // Control
@@ -989,7 +989,7 @@ interrupt void adcb1_isr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Clear the flag for the interruption of the corresponding line. If you do not do this, a new interruption does not occur
 }
 
-// sciaTxFifoIsr - SCIA Transmit FIFO ISR - IA+9999R+9999S9999F
+// sciaTxFifoIsr - SCIA Transmit FIFO ISR - ex: IA+9999F
 interrupt void sciaTxFifoIsr(void)
 {
     // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
@@ -997,15 +997,15 @@ interrupt void sciaTxFifoIsr(void)
 
     for(i=0; i < len_sci; i++)
     {
-       SciaRegs.SCITXBUF.all=scia_msgA.sdataA[i];  // Send data
+       SciaRegs.SCITXBUF.all=sci_msgA.sdata[i];  // Send data
     }
 
-    Counts.count11 += 1;
-    TxBufferAqu(&scia_msgA);
+    sci_msgA.count += 1;
+    TxBufferAqu(&sci_msgA);
 
     for (i=0; i<len_sci; i++)
     {
-        scia_msgA.sdataA[i] = scia_msgA.msg_tx[i];
+        sci_msgA.sdata[i] = sci_msgA.msg_tx[i];
     }
 
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -1014,7 +1014,6 @@ interrupt void sciaTxFifoIsr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
 }
 
-// sciaRxFifoIsr - SCIA Receive FIFO ISR - IAs9999Rs9999F
 // sciaRxFifoIsr - SCIA Receive FIFO ISR
 interrupt void sciaRxFifoIsr(void)
 {
@@ -1026,43 +1025,43 @@ interrupt void sciaRxFifoIsr(void)
 
     for(i=0;i<8;i++)
     {
-        scia_msgA.rdataA[i]=SciaRegs.SCIRXBUF.all;  // Read data
+        sci_msgA.rdata[i]=SciaRegs.SCIRXBUF.all;  // Read data
     }
 
     for (i=0; i<len_sci; i++)
     {
-        scia_msgA.msg_rx[i] = scia_msgA.rdataA[i];
+        sci_msgA.msg_rx[i] = sci_msgA.rdata[i];
     }
 
     scia_p.asci = 65;
     scia_p.decimal = false;
-    pref_temp = RxBufferAqu(&scia_p, &scia_msgA);
+    pref_temp = RxBufferAqu(&scia_p, &sci_msgA);
 
     scia_check1.asci = 67;               // C
     scia_check1.decimal = false;
-    check1 = RxBufferAqu(&scia_check1, &scia_msgA);
+    check1 = RxBufferAqu(&scia_check1, &sci_msgA);
 
     scia_q.asci = 82;
     scia_q.decimal = false;
-    qref_temp = RxBufferAqu(&scia_q, &scia_msgA);
+    qref_temp = RxBufferAqu(&scia_q, &sci_msgA);
 
     scia_check2.asci = 68;             // D
     scia_check2.decimal = false;
-    check2 = RxBufferAqu(&scia_check2, &scia_msgA);
+    check2 = RxBufferAqu(&scia_check2, &sci_msgA);
 
     scia_soc.asci = 83;
     scia_soc.decimal = true;
-    soc_temp = RxBufferAqu(&scia_soc, &scia_msgA);
+    soc_temp = RxBufferAqu(&scia_soc, &sci_msgA);
 
     scia_check3.asci = 79;             // O
     scia_check3.decimal = false;
-    check3 = RxBufferAqu(&scia_check3, &scia_msgA);
+    check3 = RxBufferAqu(&scia_check3, &sci_msgA);
 
-    soma_rx = sumAscii(scia_msgA.msg_rx, (int) len_sci);
+    soma_rx = sumAscii(sci_msgA.msg_rx, (int) len_sci);
 
-    if ((int) check1 == soma_rx)   scia_msgA.pref = pref_temp;
-    if ((int) check2 == soma_rx)   scia_msgA.qref = qref_temp;
-    if ((int) check3 == soma_rx) scia_msgA.socref = soc_temp;
+    if ((int) check1 == soma_rx)   sci_msgA.pref = pref_temp;
+    if ((int) check2 == soma_rx)   sci_msgA.qref = qref_temp;
+    if ((int) check3 == soma_rx) sci_msgA.socref = soc_temp;
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
@@ -1349,7 +1348,7 @@ void TxBufferAqu(Ssci_mesg *sci)
     char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Uint16 i = 0;
 
-    if (Counts.count11 == 0)
+    if (sci->count == 0)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -1377,7 +1376,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
 
-    if (Counts.count11 == 20)
+    if (sci->count == 20)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -1399,7 +1398,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         }
     }
 
-    if (Counts.count11 == 40)
+    if (sci->count == 40)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -1427,7 +1426,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
 
-    if (Counts.count11 == 60)
+    if (sci->count == 60)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -1449,7 +1448,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         }
     }
 
-    if (Counts.count11 == 80)
+    if (sci->count == 80)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -1482,7 +1481,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
 
-    if (Counts.count11 == 100)
+    if (sci->count == 100)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -1503,7 +1502,7 @@ void TxBufferAqu(Ssci_mesg *sci)
                 strcat(sci->msg_tx, "-");
         }
 
-        Counts.count11 = -20;
+        sci->count = -20;
     }
 }
 
