@@ -580,6 +580,30 @@ void scia_fifo_init(void)
    SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
 }
 
+void scib_fifo_init(void)
+{
+   ScibRegs.SCICCR.all = 0x0007;      // 1 stop bit,  No loopback
+                                      // No parity,8 char bits,
+                                      // async mode, idle-line protocol
+   ScibRegs.SCICTL1.all = 0x0003;     // enable TX, RX, internal SCICLK,
+                                      // Disable RX ERR, SLEEP, TXWAKE
+   ScibRegs.SCICTL2.bit.TXINTENA = 1;
+   ScibRegs.SCICTL2.bit.RXBKINTENA = 1;
+   ScibRegs.SCIHBAUD.all = ((uint16_t)SCI_PRD  & 0xFF00U) >> 8U;
+   ScibRegs.SCILBAUD.all = (uint16_t)SCI_PRD  & 0x00FFU;
+//   ScibRegs.SCICCR.bit.LOOPBKENA = 1; // Enable loop back
+   ScibRegs.SCIFFTX.all = 0xC023;
+   ScibRegs.SCIFFRX.all = 0x023;
+   ScibRegs.SCIFFCT.all = 0x00;
+
+   ScibRegs.SCIFFTX.bit.TXFFIL = 8;
+   ScibRegs.SCIFFRX.bit.RXFFIL = 8;
+
+   ScibRegs.SCICTL1.all = 0x0023;     // Relinquish SCI from Reset
+   ScibRegs.SCIFFTX.bit.TXFIFORESET = 1;
+   ScibRegs.SCIFFRX.bit.RXFIFORESET = 1;
+}
+
 void Setup_DAC(void)
 {
     EALLOW;
