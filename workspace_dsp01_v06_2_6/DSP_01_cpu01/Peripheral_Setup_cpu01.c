@@ -17,13 +17,10 @@ void ConfigureADC(void)
     Uint16 acqps;
     EALLOW;
 
-    AdcbRegs.ADCCTL2.bit.PRESCALE = 6; //set ADCCLK divider to /4
-    AdcSetMode(ADC_ADCB, ADC_RESOLUTION_12BIT, ADC_SIGNALMODE_SINGLE);
     AdcdRegs.ADCCTL2.bit.PRESCALE = 6; //set ADCCLK divider to /4
     AdcSetMode(ADC_ADCD, ADC_RESOLUTION_12BIT, ADC_SIGNALMODE_SINGLE);
 
     //Set pulse positions to late
-    AdcbRegs.ADCCTL1.bit.INTPULSEPOS = 1;
     AdcdRegs.ADCCTL1.bit.INTPULSEPOS = 1;
 
     //determine minimum acquisition window (in SYSCLKS) based on resolution
@@ -35,24 +32,6 @@ void ConfigureADC(void)
     {
         acqps = 63; //320ns
     }
-
-    //Interrup��o ADC_B INT1
-    AdcbRegs.ADCINTSEL1N2.bit.INT1SEL = 0; //end of SOC0 will set INT1 flag (Flag para inicio da interrup��o. Todos os Socs est�o sincronizados)
-    AdcbRegs.ADCINTSEL1N2.bit.INT1E = 1;   //enable INT1 flag
-    AdcbRegs.ADCINTFLGCLR.bit.ADCINT1 = 1; //make sure INT1 flag is cleared
-
-    //ADCs
-    AdcbRegs.ADCSOC0CTL.bit.CHSEL = 4;  //SOC0 will convert pin B4
-    AdcbRegs.ADCSOC0CTL.bit.ACQPS = acqps; //sample window is 100 SYSCLK cycles
-    AdcbRegs.ADCSOC0CTL.bit.TRIGSEL = 5; //trigger on ePWM1 SOCA/C
-
-    AdcbRegs.ADCSOC1CTL.bit.CHSEL = 3;  //SOC0 will convert pin B3
-    AdcbRegs.ADCSOC1CTL.bit.ACQPS = acqps; //sample window is 100 SYSCLK cycles
-    AdcbRegs.ADCSOC1CTL.bit.TRIGSEL = 5; //trigger on ePWM1 SOCA/C
-
-    AdcbRegs.ADCSOC2CTL.bit.CHSEL = 2;  //SOC0 will convert pin B2
-    AdcbRegs.ADCSOC2CTL.bit.ACQPS = acqps; //sample window is 100 SYSCLK cycles
-    AdcbRegs.ADCSOC2CTL.bit.TRIGSEL = 5; //trigger on ePWM1 SOCA/C
 
     AdcdRegs.ADCSOC0CTL.bit.CHSEL = 3;  //SOC0 will convert pin D3
     AdcdRegs.ADCSOC0CTL.bit.ACQPS = acqps; //sample window is 100 SYSCLK cycles
@@ -71,7 +50,6 @@ void ConfigureADC(void)
     AdcdRegs.ADCSOC3CTL.bit.TRIGSEL = 5; //trigger on ePWM1 SOCA/C
 
     //power up the ADC
-    AdcbRegs.ADCCTL1.bit.ADCPWDNZ = 1;
     AdcdRegs.ADCCTL1.bit.ADCPWDNZ = 1;
 
     //delay for 1ms to allow ADC time to power up
@@ -87,7 +65,7 @@ void ConfigureEPWM(void)
     EALLOW;
 
     EPwm1Regs.ETSEL.bit.SOCAEN   = 1;                  // Disable SOC on A group
-    EPwm1Regs.ETSEL.bit.SOCASEL  = ET_CTR_PRD;        // These bits determine when a EPWMxSOCA pulse will be generated.
+    EPwm1Regs.ETSEL.bit.SOCASEL  = ET_CTR_PRDZERO;        // These bits determine when a EPWMxSOCA pulse will be generated.
     EPwm1Regs.ETPS.bit.SOCAPRD  = 1;                   // Generate pulse on 1st event
     EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN;     // updown counter
     EPwm1Regs.TBPRD = 50000000/PWM_FREQ;               // Set period of PWM Fclock/(2*Fpwm)  F_clock = 100MHz
@@ -109,8 +87,8 @@ void ConfigureEPWM(void)
     EPwm1Regs.DBCTL.bit.IN_MODE = 0;
     EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
     EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active the complementary between the EPWMxA e EPWMxB
-    EPwm1Regs.DBFED.bit.DBFED = 50; // Dead-band for falling-edge (100TBCLKs = 1us)
-    EPwm1Regs.DBRED.bit.DBRED = 50; // Dead-band for rising-edge (100TBCLKs =  1us)
+    EPwm1Regs.DBFED.bit.DBFED = 100; // Dead-band for falling-edge (100TBCLKs = 1us)
+    EPwm1Regs.DBRED.bit.DBRED = 100; // Dead-band for rising-edge (100TBCLKs =  1us)
 
     // EPWM Module 2 config
 
@@ -135,8 +113,9 @@ void ConfigureEPWM(void)
     EPwm2Regs.DBCTL.bit.IN_MODE = 0;
     EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
     EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active the complementary between the EPWMxA e EPWMxB
-    EPwm2Regs.DBFED.bit.DBFED = 50; // Dead-band for falling-edge (100TBCLKs = 1us)
-    EPwm2Regs.DBRED.bit.DBRED = 50; // Dead-band for rising-edge (100TBCLKs  =  1us)
+    EPwm2Regs.DBFED.bit.DBFED = 100; // Dead-band for falling-edge (100TBCLKs = 1us)
+    EPwm2Regs.DBRED.bit.DBRED = 100; // Dead-band for rising-edge (100TBCLKs  =  1us)
+
 
     // EPWM Module 5 config
 
@@ -161,11 +140,10 @@ void ConfigureEPWM(void)
     EPwm5Regs.DBCTL.bit.IN_MODE = 0;
     EPwm5Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE; // enable Dead-band module
     EPwm5Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC; // Active the complementary between the EPWMxA e EPWMxB
-    EPwm5Regs.DBFED.bit.DBFED = 50; // Dead-band for falling-edge (100TBCLKs = 1us)
-    EPwm5Regs.DBRED.bit.DBRED = 50; // Dead-band for rising-edge (100TBCLKs  = 1us)
+    EPwm5Regs.DBFED.bit.DBFED = 100; // Dead-band for falling-edge (100TBCLKs = 1us)
+    EPwm5Regs.DBRED.bit.DBRED = 100; // Dead-band for rising-edge (100TBCLKs  = 1us)
 
     EDIS;
-
     /* Vai ser ativado no n�cleo 2 (Apagar)
     // EPWM Module6 config
 
@@ -245,6 +223,8 @@ void ConfigureEPWM(void)
     EPwm10Regs.DBFED.bit.DBFED = 100; // Dead-band for falling-edge (100TBCLKs = 1us)
     EPwm10Regs.DBRED.bit.DBRED = 100; // Dead-band for rising-edge (100TBCLKs = 1us)
     */
+
+    EDIS;
 }
 
 void GPIO_Configure()
@@ -252,33 +232,33 @@ void GPIO_Configure()
     EALLOW;
 
     //////////////////////// Digital Outputs - Relays //////////////////
-    //R1A - Relay K3
+    //R1A - Relay K1
     GpioCtrlRegs.GPBPUD.bit.GPIO59   =  0; // Enable pullup on GPIO59
     GpioDataRegs.GPBCLEAR.bit.GPIO59 =  1;   // Load output latch
     GpioCtrlRegs.GPBMUX2.bit.GPIO59  =  0; // GPIO59 = GPIO59
     GpioCtrlRegs.GPBDIR.bit.GPIO59   =  1; // GPIO59 = output
 
-    //R2A - Relay K4
+    //R2A - Relay K2
     GpioCtrlRegs.GPBPUD.bit.GPIO58   =  0; // Enable pullup on GPIO58
     GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Load output latch
     GpioCtrlRegs.GPBMUX2.bit.GPIO58  =  0; // GPIO58 = GPIO58
     GpioCtrlRegs.GPBDIR.bit.GPIO58   =  1; // GPIO58 = output
 
-    //R3A - Relay K9
+    //R3A - Relay K5
     GpioCtrlRegs.GPBPUD.bit.GPIO57   =  0; // Enable pullup on GPIO57
     GpioDataRegs.GPBCLEAR.bit.GPIO57 =  1;   // Load output latch
     GpioCtrlRegs.GPBMUX2.bit.GPIO57  =  0; // GPIO57 = GPIO57
     GpioCtrlRegs.GPBDIR.bit.GPIO57   =  1; // GPIO57 = output
     GpioCtrlRegs.GPBCSEL4.bit.GPIO57 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    //R4A - Relay K10
+    //R4A - Relay K6
     GpioCtrlRegs.GPBPUD.bit.GPIO56   =  0; // Enable pullup on GPIO56
     GpioDataRegs.GPBCLEAR.bit.GPIO56 =  1;   // Load output latch
     GpioCtrlRegs.GPBMUX2.bit.GPIO56  =  0; // GPIO56 = GPIO56
     GpioCtrlRegs.GPBDIR.bit.GPIO56   =  1; // GPIO56 = output
     GpioCtrlRegs.GPBCSEL4.bit.GPIO56 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    //R1B - Relay K11
+    //R1B - Relay K7
     GpioCtrlRegs.GPBPUD.bit.GPIO55   =  0; // Enable pullup on GPIO55
     GpioDataRegs.GPBCLEAR.bit.GPIO55 =  1;   // Load output latch
     GpioCtrlRegs.GPBMUX2.bit.GPIO55  =  0; // GPIO55 = GPIO55
@@ -360,6 +340,7 @@ void GPIO_Configure()
     GpioDataRegs.GPCCLEAR.bit.GPIO78 =  1; // Load output latch
     GpioCtrlRegs.GPCMUX1.bit.GPIO78  =  0; // GPIO78 = GPIO78
     GpioCtrlRegs.GPCDIR.bit.GPIO78   =  1; // GPIO78 = output
+    GpioCtrlRegs.GPCCSEL2.bit.GPIO78 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
     //D10
     GpioCtrlRegs.GPCPUD.bit.GPIO80   =  0; // Enable pullup on GPIO80
@@ -404,45 +385,45 @@ void GPIO_Configure()
     GpioCtrlRegs.GPCDIR.bit.GPIO92   =  1; // GPIO92 = output
 
 /////////////////////// Digital Inputs /////////////////////////////////
-    //D1 - Contactor Q3
+    //D1 - Contactor Q1
     GpioCtrlRegs.GPBPUD.bit.GPIO36  = 0;  // Enable pullup on GPIO36
     GpioCtrlRegs.GPBMUX1.bit.GPIO36 = 0;  // GPIO36 = GPIO36
     GpioCtrlRegs.GPBDIR.bit.GPIO36  = 0;  // GPIO36 = input
 
-    //D2 - Contactor Q4
+    //D2 - Contactor Q2
     GpioCtrlRegs.GPBPUD.bit.GPIO38  = 0;  // Enable pullup on GPIO38
     GpioCtrlRegs.GPBMUX1.bit.GPIO38 = 0;  // GPIO38 = GPIO38
     GpioCtrlRegs.GPBDIR.bit.GPIO38  = 0;  // GPIO38 = input
 
-    //D3 - Contactor Q9
+    //D3 - Contactor Q5
     GpioCtrlRegs.GPBPUD.bit.GPIO61  = 0;  // Enable pullup on GPIO61
     GpioCtrlRegs.GPBMUX2.bit.GPIO61 = 0;  // GPIO61 = GPIO61
     GpioCtrlRegs.GPBDIR.bit.GPIO61  = 0;  // GPIO61 = input
     GpioCtrlRegs.GPBCSEL4.bit.GPIO61 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    //D4 - Contactor Q10
+    //D4 - Contactor Q6
     GpioCtrlRegs.GPBPUD.bit.GPIO63  = 0;  // Enable pullup on GPIO63
     GpioCtrlRegs.GPBMUX2.bit.GPIO63 = 0;  // GPIO63 = GPIO63
     GpioCtrlRegs.GPBDIR.bit.GPIO63  = 0;  // GPIO63 = input
     GpioCtrlRegs.GPBCSEL4.bit.GPIO63 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    //D5 - Contactor Q11
+    //D5 - Contactor Q7
     GpioCtrlRegs.GPCPUD.bit.GPIO65  = 0;  // Enable pullup on GPIO65
     GpioCtrlRegs.GPCMUX1.bit.GPIO65 = 0;  // GPIO65 = GPIO65
     GpioCtrlRegs.GPCDIR.bit.GPIO65  = 0;  // GPIO65 = input
     GpioCtrlRegs.GPCCSEL1.bit.GPIO65 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    //D6 - Contactor Q14
+    //D6 - Contactor Q13
     GpioCtrlRegs.GPCPUD.bit.GPIO67  = 0;  // Enable pullup on GPIO67
     GpioCtrlRegs.GPCMUX1.bit.GPIO67 = 0;  // GPIO67 = GPIO67
     GpioCtrlRegs.GPCDIR.bit.GPIO67  = 0;  // GPIO67 = input
 
-    //D7 - Contactor TE3
+    //D7 - TE1
     GpioCtrlRegs.GPCPUD.bit.GPIO69   = 0;  // Enable pullup on GPIO69
     GpioCtrlRegs.GPCMUX1.bit.GPIO69  = 0;  // GPIO69 = GPIO69
     GpioCtrlRegs.GPCDIR.bit.GPIO69   = 0;  // GPIO69 = input
 
-    //D8 - Contactor TE4
+    //D8 - TE2
     GpioCtrlRegs.GPCPUD.bit.GPIO71   = 0;  // Enable pullup on GPIO71
     GpioCtrlRegs.GPCMUX1.bit.GPIO71  = 0;  // GPIO71 = GPIO71
     GpioCtrlRegs.GPCDIR.bit.GPIO71   = 0;  // GPIO71 = input
@@ -512,7 +493,7 @@ void GPIO_Configure()
     GpioCtrlRegs.GPBDIR.bit.GPIO32   =  1; // GPIO32 = output
 
 /////////////////////////////// Gatedriver error GPIOs Initialization - Converters - Input/////////////////////////////////
-    //GSC
+       //GSC
     GpioCtrlRegs.GPBPUD.bit.GPIO41   = 0;  // Enable pullup on GPIO41
     GpioCtrlRegs.GPBMUX1.bit.GPIO41  = 0;  // GPIO41 = GPIO48
     GpioCtrlRegs.GPBDIR.bit.GPIO41   = 0;  // GPIO41 = input
@@ -521,7 +502,7 @@ void GPIO_Configure()
     GpioCtrlRegs.GPBMUX1.bit.GPIO40  = 0;  // GPIO40 = GPIO48
     GpioCtrlRegs.GPBDIR.bit.GPIO40   = 0;  // GPIO40 = input
 
-    //////////////////////////////////LED/////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////LED/////////////////////////////////////////////////////////////////////////////
     //Led 2
     GpioCtrlRegs.GPAPUD.bit.GPIO31   =  1; // Enable pullup on GPIO31
     GpioDataRegs.GPACLEAR.bit.GPIO31 =  1; // Load output latch
@@ -536,24 +517,27 @@ void GPIO_Configure()
     GpioCtrlRegs.GPBDIR.bit.GPIO34   =  1; // GPIO31 = output
     GpioCtrlRegs.GPBCSEL1.bit.GPIO34 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    //////////////////////// Comunica��o DSP 2 - 1 //////////////////
-    //GPIO24 (Input) - Prote��o
-    GpioCtrlRegs.GPAPUD.bit.GPIO24  = 1;  // Enable pullup on GPIO24
-    GpioCtrlRegs.GPAMUX2.bit.GPIO24 = 0;  // GPIO24 = GPIO24
-    GpioCtrlRegs.GPADIR.bit.GPIO24  = 0;  // GPIO24 = input
+    //////////////////////// Comunica��o DSP 1 - 2 //////////////////
+    //GPIO24 (Output) - Prote��o
+    GpioCtrlRegs.GPAPUD.bit.GPIO24   =  1; // Disable pullup on GPIO24
+    GpioDataRegs.GPACLEAR.bit.GPIO24 =  1;   // Load output latch
+    GpioCtrlRegs.GPAMUX2.bit.GPIO24  =  0; // GPIO24 = GPIO24
+    GpioCtrlRegs.GPADIR.bit.GPIO24   =  1; // GPIO24 = output
+    GpioCtrlRegs.GPACSEL4.bit.GPIO24 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    //GPIO25 (Output) - Prote��o
-    GpioCtrlRegs.GPAPUD.bit.GPIO25   =  1; // Disable pullup on GPIO25
-    GpioDataRegs.GPACLEAR.bit.GPIO25 =  1;   // Load output latch
-    GpioCtrlRegs.GPAMUX2.bit.GPIO25  =  0; // GPIO25 = GPIO25
-    GpioCtrlRegs.GPADIR.bit.GPIO25   =  1; // GPIO25 = output
+    //GPIO25 (Input) - Prote��o
+    GpioCtrlRegs.GPAPUD.bit.GPIO25  = 1;  // Enable pullup on GPIO25
+    GpioCtrlRegs.GPAMUX2.bit.GPIO25 = 0;  // GPIO25 = GPIO25
+    GpioCtrlRegs.GPADIR.bit.GPIO25  = 0;  // GPIO25 = input
 
-    //GPIO26 (Input) - Sincroniza��o entre as DSPs dos dois Kits
-    GpioCtrlRegs.GPAPUD.bit.GPIO26  = 1;  // Enable pullup on GPIO26
-    GpioCtrlRegs.GPAMUX2.bit.GPIO26 = 0;  // GPIO26 = GPIO26
-    GpioCtrlRegs.GPADIR.bit.GPIO26  = 0;  // GPIO26 = input
+    //GPIO26 (Output) - Sincroniza��o entre as DSPs dos dois Kits
+    GpioCtrlRegs.GPAPUD.bit.GPIO26   =  1; // Disable pullup on GPIO26
+    GpioDataRegs.GPACLEAR.bit.GPIO26 =  1;   // Load output latch
+    GpioCtrlRegs.GPAMUX2.bit.GPIO26  =  0; // GPIO26 = GPIO26
+    GpioCtrlRegs.GPADIR.bit.GPIO26   =  1; // GPIO26 = output
+    GpioCtrlRegs.GPACSEL4.bit.GPIO26 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    EDIS;
+   EDIS;
 }
 
 void scia_fifo_init(void)
