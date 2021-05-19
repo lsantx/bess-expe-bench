@@ -13,11 +13,14 @@ SCI communication:
 	- Baud Rate = 9600 bps;
 
 IAs9999F   		10x
+
 ICsum(IAs9999F)F   	10x
 
 IRs9999F   		10x
+
 IDsum(IAs9999F)F  	10x
 
 IS99.99F   		10x
+
 IOsum(IS99.99F)F  	10x
 
