@@ -811,7 +811,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
 
-    if (sci->count == 20)
+    if (sci->count == 10)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -833,7 +833,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         }
     }
 
-    if (sci->count == 40)
+    if (sci->count == 20)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -861,7 +861,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
 
-    if (sci->count == 60)
+    if (sci->count == 30)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -883,7 +883,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         }
     }
 
-    if (sci->count == 80)
+    if (sci->count == 40)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -916,7 +916,7 @@ void TxBufferAqu(Ssci_mesg *sci)
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
 
-    if (sci->count == 100)
+    if (sci->count == 50)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -937,7 +937,7 @@ void TxBufferAqu(Ssci_mesg *sci)
                 strcat(sci->msg_tx, "-");
         }
 
-        sci->count = -20;
+        sci->count = -10;
     }
 }
 

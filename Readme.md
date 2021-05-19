@@ -10,7 +10,14 @@ https://www.ti.com/diagrams/tmdsdock28379d_6_28_16_ti_--125crop_resized.jpg
 
 SCI communication:
 
-	- Baud Rate = 370 us;
-	- SCI_FREQ = 2700 Hz;
-	- Transmit FIFO = 3 words (Active Power, Reactive Power and Battery SOC)
+	- Baud Rate = 9600 bps;
+
+IAs9999F   		10x
+ICsum(IAs9999F)F   	10x
+
+IRs9999F   		10x
+IDsum(IAs9999F)F  	10x
+
+IS99.99F   		10x
+IOsum(IS99.99F)F  	10x
 
