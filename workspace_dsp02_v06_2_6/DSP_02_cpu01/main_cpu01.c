@@ -352,7 +352,6 @@ typedef struct{
 
 #define SCI_MSG_DEFAULTS {0,0,0,0,0,0,0,0,0,{0},{0},{0},{0}}
 Ssci_mesg sci_msgA = SCI_MSG_DEFAULTS;
-Ssci_mesg sci_msgB = SCI_MSG_DEFAULTS;
 
 ///////////////////////////////////////////// Functions ////////////////////////////////////////
 // Control
@@ -449,11 +448,6 @@ void main(void)
    GPIO_SetupPinMux(29, GPIO_MUX_CPU1, 1);
    GPIO_SetupPinOptions(29, GPIO_OUTPUT, GPIO_ASYNC);
 
-   GPIO_SetupPinMux(23, GPIO_MUX_CPU1, 3);
-   GPIO_SetupPinOptions(23, GPIO_INPUT, GPIO_PUSHPULL);
-   GPIO_SetupPinMux(22, GPIO_MUX_CPU1, 3);
-   GPIO_SetupPinOptions(22, GPIO_OUTPUT, GPIO_ASYNC);
-
 //
 // Step 3. Clear all interrupts and initialize PIE vector table:
 // Disable CPU interrupts
@@ -494,14 +488,10 @@ void main(void)
     PieVectTable.IPC1_INT = &IPC1_INT; //function of the interruption of the IPC for communication of CPus
     PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption
     PieVectTable.SCIA_TX_INT = &sciaTxFifoIsr;  // SCI Rx interruption
-    PieVectTable.SCIB_RX_INT = &scibRxFifoIsr;  // SCI Tx interruption
-    PieVectTable.SCIB_TX_INT = &scibTxFifoIsr;  // SCI Rx interruption
     PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
     PieCtrlRegs.PIEIER1.bit.INTx14 = 1;      //IPC1 interruption of intercommunication between CPUs. Enables the corresponding column 14
     PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1 SCIA_RX
     PieCtrlRegs.PIEIER9.bit.INTx2 = 1;   // PIE Group 9, INT2 SCIA_TX
-    PieCtrlRegs.PIEIER9.bit.INTx4 = 1;   // PIE Group 9, INT1 SCIB_RX
-    PieCtrlRegs.PIEIER9.bit.INTx3 = 1;   // PIE Group 9, INT2 SCIB_TX
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
@@ -514,9 +504,6 @@ void main(void)
 
 // Configure Init SCI-A - fifo
     scia_fifo_init();
-
-// Configure Init SCI-B - fifo
-    scib_fifo_init();
 
 // Configure the ADC and power it up
 //
@@ -554,7 +541,7 @@ void main(void)
     // Enables CPU02 to load and wait for its loading loading through the finite loop
     ////Reminder. The CPIs that trigger interruption are 0,1,2 and 3. The others have no interruption and can be used as flags
     //
-    while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
+    //while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
     IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
     while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
     IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag
@@ -1046,31 +1033,6 @@ interrupt void sciaTxFifoIsr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
 }
 
-// scibTxFifoIsr - SCIB Transmit FIFO ISR - ex: IA+9999F
-interrupt void scibTxFifoIsr(void)
-{
-    // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
-    Uint16 i;
-
-    for(i=0; i < len_sci; i++)
-    {
-       ScibRegs.SCITXBUF.all=sci_msgB.sdata[i];  // Send data
-    }
-
-    sci_msgB.count += 1;
-    TxBufferAqu(&sci_msgB);
-
-    for (i=0; i<len_sci; i++)
-    {
-        sci_msgB.sdata[i] = sci_msgB.msg_tx[i];
-    }
-
-    //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
-
-    ScibRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
-}
-
 // sciaRxFifoIsr - SCIA Receive FIFO ISR
 interrupt void sciaRxFifoIsr(void)
 {
@@ -1126,60 +1088,6 @@ interrupt void sciaRxFifoIsr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ack
 }
 
-// scibRxFifoIsr - SCIB Receive FIFO ISR
-interrupt void scibRxFifoIsr(void)
-{
-    Uint16 i;
-    Uint16 soma_rx = 0;
-    float pref_temp = 0;
-    float qref_temp = 0;
-    float soc_temp = 0;
-
-    for(i=0;i<8;i++)
-    {
-        sci_msgB.rdata[i]=ScibRegs.SCIRXBUF.all;  // Read data
-    }
-
-    for (i=0; i<len_sci; i++)
-    {
-        sci_msgB.msg_rx[i] = sci_msgB.rdata[i];
-    }
-
-    scib_p.asci = 65;
-    scib_p.decimal = false;
-    pref_temp = RxBufferAqu(&scib_p, &sci_msgB);
-
-    scib_check1.asci = 67;               // C
-    scib_check1.decimal = false;
-    sci_msgB.check1 = RxBufferAqu(&scib_check1, &sci_msgB);
-
-    scib_q.asci = 82;
-    scib_q.decimal = false;
-    qref_temp = RxBufferAqu(&scib_q, &sci_msgB);
-
-    scib_check2.asci = 68;             // D
-    scib_check2.decimal = false;
-    sci_msgB.check2 = RxBufferAqu(&scib_check2, &sci_msgB);
-
-    scib_soc.asci = 83;
-    scib_soc.decimal = true;
-    soc_temp = RxBufferAqu(&scib_soc, &sci_msgB);
-
-    scib_check3.asci = 79;             // O
-    scib_check3.decimal = false;
-    sci_msgB.check3 = RxBufferAqu(&scib_check3, &sci_msgB);
-
-    soma_rx = sumAscii(sci_msgB.msg_rx, (int) len_sci);
-
-    if ((int) sci_msgB.check1 == soma_rx)   sci_msgB.pref = pref_temp;
-    if ((int) sci_msgB.check2 == soma_rx)   sci_msgB.qref = qref_temp;
-    if ((int) sci_msgB.check3 == soma_rx) sci_msgB.socref = soc_temp;
-
-    ScibRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
-    ScibRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
-
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ack
-}
 //////////////////////////////////////////////////Control Functions//////////////////////////////////////
 // abc-alfabeta transformation
 void TUPA_abc2alfabeta(sABC *p_abc, sAlfaBeta *p_alfabeta)
@@ -1459,6 +1367,10 @@ void TxBufferAqu(Ssci_mesg *sci)
     char aux[4] = {0, 0, 0, 0};
     char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Uint16 i = 0;
+    Uint16 plen = 4;
+    Uint16 qlen = 4;
+    Uint16 soclen = 2;
+    Uint16 sumlen = 5;
 
     if (sci->count == 0)
     {
@@ -1473,17 +1385,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         else strcat(sci->msg_tx, "0");
 
         sprintf(aux, "%d", (int) abs(pout));
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < plen)
+        {
+            for(i=0; i<(plen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
 
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
@@ -1497,17 +1407,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         strcat(sci->msg_tx, "C");
 
         sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux2);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
     }
 
     if (sci->count == 20)
@@ -1523,17 +1431,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         else strcat(sci->msg_tx, "0");
 
         sprintf(aux, "%d", (int) abs(qout));
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < qlen)
+        {
+            for(i=0; i<(qlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
 
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
@@ -1547,17 +1453,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         strcat(sci->msg_tx, "D");
 
         sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux2);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
     }
 
     if (sci->count == 40)
@@ -1573,6 +1477,12 @@ void TxBufferAqu(Ssci_mesg *sci)
         int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
 
         sprintf(aux, "%d", integerPart);
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < soclen)
+        {
+            for(i=0; i<(soclen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux);
 
         strcat(sci->msg_tx, ".");
@@ -1581,14 +1491,6 @@ void TxBufferAqu(Ssci_mesg *sci)
         strcat(sci->msg_tx, aux);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
 
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
@@ -1602,17 +1504,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         strcat(sci->msg_tx, "O");
 
         sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux2);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
 
         sci->count = -10;
     }

@@ -782,6 +782,10 @@ void TxBufferAqu(Ssci_mesg *sci)
     char aux[4] = {0, 0, 0, 0};
     char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Uint16 i = 0;
+    Uint16 plen = 4;
+    Uint16 qlen = 4;
+    Uint16 soclen = 2;
+    Uint16 sumlen = 5;
 
     if (sci->count == 0)
     {
@@ -796,17 +800,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         else strcat(sci->msg_tx, "0");
 
         sprintf(aux, "%d", (int) abs(pout));
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < plen)
+        {
+            for(i=0; i<(plen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
 
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
@@ -820,17 +822,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         strcat(sci->msg_tx, "C");
 
         sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux2);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
     }
 
     if (sci->count == 20)
@@ -846,17 +846,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         else strcat(sci->msg_tx, "0");
 
         sprintf(aux, "%d", (int) abs(qout));
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < qlen)
+        {
+            for(i=0; i<(qlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
 
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
@@ -870,17 +868,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         strcat(sci->msg_tx, "D");
 
         sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux2);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
     }
 
     if (sci->count == 40)
@@ -896,6 +892,12 @@ void TxBufferAqu(Ssci_mesg *sci)
         int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
 
         sprintf(aux, "%d", integerPart);
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < soclen)
+        {
+            for(i=0; i<(soclen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux);
 
         strcat(sci->msg_tx, ".");
@@ -904,14 +906,6 @@ void TxBufferAqu(Ssci_mesg *sci)
         strcat(sci->msg_tx, aux);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
 
         sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
@@ -925,17 +919,15 @@ void TxBufferAqu(Ssci_mesg *sci)
         strcat(sci->msg_tx, "O");
 
         sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
         strcat(sci->msg_tx, aux2);
 
         strcat(sci->msg_tx, "F");
-
-        sci->len_msg = strlen(sci->msg_tx);
-
-        if(sci->len_msg < len_sci)
-        {
-            for(i=0; i<(len_sci-sci->len_msg); i++)
-                strcat(sci->msg_tx, "-");
-        }
 
         sci->count = -10;
     }
