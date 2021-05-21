@@ -627,7 +627,6 @@ interrupt void sciaTxFifoIsr(void)
        SciaRegs.SCITXBUF.all=sci_msgA.sdata[i];  // Send data
     }
 
-    sci_msgA.count += 1;
     TxBufferAqu(&sci_msgA);
 
     for (i=0; i<len_sci; i++)
@@ -652,7 +651,6 @@ interrupt void scibTxFifoIsr(void)
        ScibRegs.SCITXBUF.all=sci_msgB.sdata[i];  // Send data
     }
 
-    sci_msgB.count += 1;
     TxBufferAqu(&sci_msgB);
 
     for (i=0; i<len_sci; i++)
@@ -929,8 +927,10 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "F");
 
-        sci->count = -10;
+        sci->count = -11;
     }
+
+    sci->count += 1;
 }
 
 // Rx funtion
