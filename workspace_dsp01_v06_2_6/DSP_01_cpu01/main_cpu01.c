@@ -970,7 +970,7 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
 
         if(i>=len_sci) i = 0;
 
-        if(k>=50) break;
+        if(k>=16) break;
     }
 
     if (aq1 == 1 && sci->decimal == false) sci->sci_out = strtol(aux, NULL, 10);

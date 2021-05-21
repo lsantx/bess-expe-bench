@@ -580,7 +580,6 @@ void scia_fifo_init(void)
    SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
 }
 
-
 void Setup_DAC(void)
 {
     EALLOW;

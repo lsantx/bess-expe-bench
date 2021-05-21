@@ -714,6 +714,31 @@ void main(void)
         //which fill the results buffer, eventually setting the bufferFull
         //flag
         //
+        if ((reset_sci == 1) || (SciaRegs.SCIRXST.all != 0x0000))
+       {
+           SciaRegs.SCIFFTX.bit.TXFIFORESET = 0;
+           SciaRegs.SCIFFRX.bit.RXFIFORESET = 0;
+           SciaRegs.SCIFFTX.bit.SCIRST = 0;
+       }
+       else
+       {
+           SciaRegs.SCIFFTX.bit.TXFIFORESET = 1;
+           SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
+           SciaRegs.SCIFFTX.bit.SCIRST = 1;
+       }
+
+       if ((reset_sci == 1) || (ScibRegs.SCIRXST.all != 0x0000))
+       {
+         ScibRegs.SCIFFTX.bit.TXFIFORESET = 0;
+         ScibRegs.SCIFFRX.bit.RXFIFORESET = 0;
+         ScibRegs.SCIFFTX.bit.SCIRST = 0;
+       }
+       else
+       {
+         ScibRegs.SCIFFTX.bit.TXFIFORESET = 1;
+         ScibRegs.SCIFFRX.bit.RXFIFORESET = 1;
+         ScibRegs.SCIFFTX.bit.SCIRST = 1;
+       }
     }
 }
 
@@ -967,39 +992,6 @@ interrupt void adcb1_isr(void)
        //EPwm6Regs.CMPA.bit.CMPA = sv_grid.Ta;
        //EPwm9Regs.CMPA.bit.CMPA = sv_grid.Tb;
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
-
-    //    Counts.count10 += 1;
-
-    //    if(Counts.count10 == 1000)
-    //    {
-    //        Counts.count10 = 0;
-    //        TxBufferAqu();
-    //    }
-       if ((reset_sci == 1) || (SciaRegs.SCIRXST.all != 0x0000))
-       {
-           SciaRegs.SCIFFTX.bit.TXFIFORESET = 0;
-           SciaRegs.SCIFFRX.bit.RXFIFORESET = 0;
-           SciaRegs.SCIFFTX.bit.SCIRST = 0;
-       }
-       else
-       {
-           SciaRegs.SCIFFTX.bit.TXFIFORESET = 1;
-           SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
-           SciaRegs.SCIFFTX.bit.SCIRST = 1;
-       }
-
-       if ((reset_sci == 1) || (ScibRegs.SCIRXST.all != 0x0000))
-       {
-         ScibRegs.SCIFFTX.bit.TXFIFORESET = 0;
-         ScibRegs.SCIFFRX.bit.RXFIFORESET = 0;
-         ScibRegs.SCIFFTX.bit.SCIRST = 0;
-       }
-       else
-       {
-         ScibRegs.SCIFFTX.bit.TXFIFORESET = 1;
-         ScibRegs.SCIFFRX.bit.RXFIFORESET = 1;
-         ScibRegs.SCIFFTX.bit.SCIRST = 1;
-       }
     }
 
     GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -1555,7 +1547,7 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
 
         if(i>=len_sci) i = 0;
 
-        if(k>=50) break;
+        if(k>=16) break;
     }
 
     if (aq1 == 1 && sci->decimal == false) sci->sci_out = strtol(aux, NULL, 10);
