@@ -404,8 +404,9 @@ Uint32 N_amostras = 60000;
 float pout = 4000.54;
 float qout = 1000.54;
 float soc = 25.4;
-char reset[len_sci] = {0, 0, 0, 0, 0, 0, 0, 0};
+char reset[len_sci] = {0};
 Uint16 reset_sci = 0;
+int flag_tx = 0;
 
 //Main
 void main(void)
@@ -622,9 +623,14 @@ interrupt void sciaTxFifoIsr(void)
     // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
     Uint16 i;
 
-    for(i=0; i < len_sci; i++)
+    if (flag_tx == 1)
     {
-       SciaRegs.SCITXBUF.all=sci_msgA.sdata[i];  // Send data
+        for(i=0; i < len_sci; i++)
+        {
+           SciaRegs.SCITXBUF.all=sci_msgA.sdata[i];  // Send data
+        }
+
+        flag_tx = 0;
     }
 
     TxBufferAqu(&sci_msgA);
@@ -785,152 +791,154 @@ void TxBufferAqu(Ssci_mesg *sci)
     Uint16 soclen = 2;
     Uint16 sumlen = 5;
 
-    if (sci->count == 0)
-    {
-        strcpy(sci->msg_tx, reset);
+    strcat(sci->msg_tx, "A");
 
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "A");
-
-        if((int) pout >= 0) strcat(sci->msg_tx, "+");
-        else if((int) pout < 0) strcat(sci->msg_tx, "-");
-        else strcat(sci->msg_tx, "0");
-
-        sprintf(aux, "%d", (int) abs(pout));
-        sci->len_msg = strlen(aux);
-        if(sci->len_msg < plen)
-        {
-            for(i=0; i<(plen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux);
-
-        strcat(sci->msg_tx, "F");
-
-        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
-    }
-
-    if (sci->count == 10)
-    {
-        strcpy(sci->msg_tx, reset);
-
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "C");
-
-        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-        sci->len_msg = strlen(aux2);
-        if(sci->len_msg < sumlen)
-        {
-            for(i=0; i<(sumlen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux2);
-
-        strcat(sci->msg_tx, "F");
-    }
-
-    if (sci->count == 20)
-    {
-        strcpy(sci->msg_tx, reset);
-
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "R");
-
-        if((int) qout >= 0) strcat(sci->msg_tx, "+");
-        else if((int) qout < 0) strcat(sci->msg_tx, "-");
-        else strcat(sci->msg_tx, "0");
-
-        sprintf(aux, "%d", (int) abs(qout));
-        sci->len_msg = strlen(aux);
-        if(sci->len_msg < qlen)
-        {
-            for(i=0; i<(qlen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux);
-
-        strcat(sci->msg_tx, "F");
-
-        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
-    }
-
-    if (sci->count == 30)
-    {
-        strcpy(sci->msg_tx, reset);
-
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "D");
-
-        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-        sci->len_msg = strlen(aux2);
-        if(sci->len_msg < sumlen)
-        {
-            for(i=0; i<(sumlen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux2);
-
-        strcat(sci->msg_tx, "F");
-    }
-
-    if (sci->count == 40)
-    {
-        strcpy(sci->msg_tx, reset);
-
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "S");
-
-        int n_decimal_points_precision = 100;
-        int integerPart = (int)soc;
-        int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
-
-        sprintf(aux, "%d", integerPart);
-        sci->len_msg = strlen(aux);
-        if(sci->len_msg < soclen)
-        {
-            for(i=0; i<(soclen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux);
-
-        strcat(sci->msg_tx, ".");
-
-        sprintf(aux, "%d", decimalPart);
-        strcat(sci->msg_tx, aux);
-
-        strcat(sci->msg_tx, "F");
-
-        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
-    }
-
-    if (sci->count == 50)
-    {
-        strcpy(sci->msg_tx, reset);
-
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "O");
-
-        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-        sci->len_msg = strlen(aux2);
-        if(sci->len_msg < sumlen)
-        {
-            for(i=0; i<(sumlen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux2);
-
-        strcat(sci->msg_tx, "F");
-
-        sci->count = -11;
-    }
-
-    sci->count += 1;
+//    if (sci->count == 0)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "A");
+//
+//        if((int) pout >= 0) strcat(sci->msg_tx, "+");
+//        else if((int) pout < 0) strcat(sci->msg_tx, "-");
+//        else strcat(sci->msg_tx, "0");
+//
+//        sprintf(aux, "%d", (int) abs(pout));
+//        sci->len_msg = strlen(aux);
+//        if(sci->len_msg < plen)
+//        {
+//            for(i=0; i<(plen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux);
+//
+//        strcat(sci->msg_tx, "F");
+//
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+//    }
+//
+//    if (sci->count == 10)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "C");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "F");
+//    }
+//
+//    if (sci->count == 20)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "R");
+//
+//        if((int) qout >= 0) strcat(sci->msg_tx, "+");
+//        else if((int) qout < 0) strcat(sci->msg_tx, "-");
+//        else strcat(sci->msg_tx, "0");
+//
+//        sprintf(aux, "%d", (int) abs(qout));
+//        sci->len_msg = strlen(aux);
+//        if(sci->len_msg < qlen)
+//        {
+//            for(i=0; i<(qlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux);
+//
+//        strcat(sci->msg_tx, "F");
+//
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+//    }
+//
+//    if (sci->count == 30)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "D");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "F");
+//    }
+//
+//    if (sci->count == 40)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "S");
+//
+//        int n_decimal_points_precision = 100;
+//        int integerPart = (int)soc;
+//        int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
+//
+//        sprintf(aux, "%d", integerPart);
+//        sci->len_msg = strlen(aux);
+//        if(sci->len_msg < soclen)
+//        {
+//            for(i=0; i<(soclen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux);
+//
+//        strcat(sci->msg_tx, ".");
+//
+//        sprintf(aux, "%d", decimalPart);
+//        strcat(sci->msg_tx, aux);
+//
+//        strcat(sci->msg_tx, "F");
+//
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+//    }
+//
+//    if (sci->count == 50)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "O");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "F");
+//
+//        sci->count = -11;
+//    }
+//
+//    sci->count += 1;
 }
 
 // Rx funtion
