@@ -14,7 +14,7 @@
 #define LSPCLK_FREQ     CPU_FREQ/4
 #define SCI_FREQ        2700           // SCI Assync Baud (Baud rate).
 #define SCI_PRD         650            // 9600 bps. See man pg 2174 and 2184
-#define len_sci         1
+#define len_sci         8
 
 //Constantes
 #define DOISPI               6.283185307179586  // 2*PI

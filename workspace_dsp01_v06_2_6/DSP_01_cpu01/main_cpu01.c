@@ -625,19 +625,20 @@ interrupt void sciaTxFifoIsr(void)
 
     if (flag_tx == 1)
     {
+
+        TxBufferAqu(&sci_msgA);
+
+        for (i=0; i<len_sci; i++)
+        {
+            sci_msgA.sdata[i] = sci_msgA.msg_tx[i];
+        }
+
         for(i=0; i < len_sci; i++)
         {
            SciaRegs.SCITXBUF.all=sci_msgA.sdata[i];  // Send data
         }
 
         flag_tx = 0;
-    }
-
-    TxBufferAqu(&sci_msgA);
-
-    for (i=0; i<len_sci; i++)
-    {
-        sci_msgA.sdata[i] = sci_msgA.msg_tx[i];
     }
 
     //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
@@ -689,6 +690,8 @@ interrupt void sciaRxFifoIsr(void)
         sci_msgA.msg_rx[i] = sci_msgA.rdata[i];
     }
 
+    soma_rx = sumAscii(sci_msgA.msg_rx, (int) len_sci);
+
     scia_p.asci = 65;
     scia_p.decimal = false;
     pref_temp = RxBufferAqu(&scia_p, &sci_msgA);
@@ -697,26 +700,26 @@ interrupt void sciaRxFifoIsr(void)
     scia_check1.decimal = false;
     sci_msgA.check1 = RxBufferAqu(&scia_check1, &sci_msgA);
 
+    if ((int) sci_msgA.check1 == soma_rx)   sci_msgA.pref = pref_temp;
+
     scia_q.asci = 82;
     scia_q.decimal = false;
     qref_temp = RxBufferAqu(&scia_q, &sci_msgA);
 
-    scia_check2.asci = 68;             // D
+    scia_check2.asci = 67;             // C
     scia_check2.decimal = false;
     sci_msgA.check2 = RxBufferAqu(&scia_check2, &sci_msgA);
+
+    if ((int) sci_msgA.check2 == soma_rx)   sci_msgA.qref = qref_temp;
 
     scia_soc.asci = 83;
     scia_soc.decimal = true;
     soc_temp = RxBufferAqu(&scia_soc, &sci_msgA);
 
-    scia_check3.asci = 79;             // O
+    scia_check3.asci = 67;             // C
     scia_check3.decimal = false;
     sci_msgA.check3 = RxBufferAqu(&scia_check3, &sci_msgA);
 
-    soma_rx = sumAscii(sci_msgA.msg_rx, (int) len_sci);
-
-    if ((int) sci_msgA.check1 == soma_rx)   sci_msgA.pref = pref_temp;
-    if ((int) sci_msgA.check2 == soma_rx)   sci_msgA.qref = qref_temp;
     if ((int) sci_msgA.check3 == soma_rx) sci_msgA.socref = soc_temp;
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
@@ -791,154 +794,152 @@ void TxBufferAqu(Ssci_mesg *sci)
     Uint16 soclen = 2;
     Uint16 sumlen = 5;
 
-    strcat(sci->msg_tx, "A");
+    if (sci->count == 0)
+    {
+        strcpy(sci->msg_tx, reset);
 
-//    if (sci->count == 0)
-//    {
-//        strcpy(sci->msg_tx, reset);
-//
-//        strcat(sci->msg_tx, "I");
-//
-//        strcat(sci->msg_tx, "A");
-//
-//        if((int) pout >= 0) strcat(sci->msg_tx, "+");
-//        else if((int) pout < 0) strcat(sci->msg_tx, "-");
-//        else strcat(sci->msg_tx, "0");
-//
-//        sprintf(aux, "%d", (int) abs(pout));
-//        sci->len_msg = strlen(aux);
-//        if(sci->len_msg < plen)
-//        {
-//            for(i=0; i<(plen-sci->len_msg); i++)
-//                strcat(sci->msg_tx, "0");
-//        }
-//        strcat(sci->msg_tx, aux);
-//
-//        strcat(sci->msg_tx, "F");
-//
-//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
-//    }
-//
-//    if (sci->count == 10)
-//    {
-//        strcpy(sci->msg_tx, reset);
-//
-//        strcat(sci->msg_tx, "I");
-//
-//        strcat(sci->msg_tx, "C");
-//
-//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-//        sci->len_msg = strlen(aux2);
-//        if(sci->len_msg < sumlen)
-//        {
-//            for(i=0; i<(sumlen-sci->len_msg); i++)
-//                strcat(sci->msg_tx, "0");
-//        }
-//        strcat(sci->msg_tx, aux2);
-//
-//        strcat(sci->msg_tx, "F");
-//    }
-//
-//    if (sci->count == 20)
-//    {
-//        strcpy(sci->msg_tx, reset);
-//
-//        strcat(sci->msg_tx, "I");
-//
-//        strcat(sci->msg_tx, "R");
-//
-//        if((int) qout >= 0) strcat(sci->msg_tx, "+");
-//        else if((int) qout < 0) strcat(sci->msg_tx, "-");
-//        else strcat(sci->msg_tx, "0");
-//
-//        sprintf(aux, "%d", (int) abs(qout));
-//        sci->len_msg = strlen(aux);
-//        if(sci->len_msg < qlen)
-//        {
-//            for(i=0; i<(qlen-sci->len_msg); i++)
-//                strcat(sci->msg_tx, "0");
-//        }
-//        strcat(sci->msg_tx, aux);
-//
-//        strcat(sci->msg_tx, "F");
-//
-//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
-//    }
-//
-//    if (sci->count == 30)
-//    {
-//        strcpy(sci->msg_tx, reset);
-//
-//        strcat(sci->msg_tx, "I");
-//
-//        strcat(sci->msg_tx, "D");
-//
-//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-//        sci->len_msg = strlen(aux2);
-//        if(sci->len_msg < sumlen)
-//        {
-//            for(i=0; i<(sumlen-sci->len_msg); i++)
-//                strcat(sci->msg_tx, "0");
-//        }
-//        strcat(sci->msg_tx, aux2);
-//
-//        strcat(sci->msg_tx, "F");
-//    }
-//
-//    if (sci->count == 40)
-//    {
-//        strcpy(sci->msg_tx, reset);
-//
-//        strcat(sci->msg_tx, "I");
-//
-//        strcat(sci->msg_tx, "S");
-//
-//        int n_decimal_points_precision = 100;
-//        int integerPart = (int)soc;
-//        int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
-//
-//        sprintf(aux, "%d", integerPart);
-//        sci->len_msg = strlen(aux);
-//        if(sci->len_msg < soclen)
-//        {
-//            for(i=0; i<(soclen-sci->len_msg); i++)
-//                strcat(sci->msg_tx, "0");
-//        }
-//        strcat(sci->msg_tx, aux);
-//
-//        strcat(sci->msg_tx, ".");
-//
-//        sprintf(aux, "%d", decimalPart);
-//        strcat(sci->msg_tx, aux);
-//
-//        strcat(sci->msg_tx, "F");
-//
-//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
-//    }
-//
-//    if (sci->count == 50)
-//    {
-//        strcpy(sci->msg_tx, reset);
-//
-//        strcat(sci->msg_tx, "I");
-//
-//        strcat(sci->msg_tx, "O");
-//
-//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-//        sci->len_msg = strlen(aux2);
-//        if(sci->len_msg < sumlen)
-//        {
-//            for(i=0; i<(sumlen-sci->len_msg); i++)
-//                strcat(sci->msg_tx, "0");
-//        }
-//        strcat(sci->msg_tx, aux2);
-//
-//        strcat(sci->msg_tx, "F");
-//
-//        sci->count = -11;
-//    }
-//
-//    sci->count += 1;
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "A");
+
+        if((int) pout >= 0) strcat(sci->msg_tx, "+");
+        else if((int) pout < 0) strcat(sci->msg_tx, "-");
+        else strcat(sci->msg_tx, "0");
+
+        sprintf(aux, "%d", (int) abs(pout));
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < plen)
+        {
+            for(i=0; i<(plen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux);
+
+        strcat(sci->msg_tx, "\n");
+
+        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+    }
+
+    if (sci->count == 1)
+    {
+        strcpy(sci->msg_tx, reset);
+
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "C");
+
+        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux2);
+
+        strcat(sci->msg_tx, "\n");
+    }
+
+    if (sci->count == 2)
+    {
+        strcpy(sci->msg_tx, reset);
+
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "R");
+
+        if((int) qout >= 0) strcat(sci->msg_tx, "+");
+        else if((int) qout < 0) strcat(sci->msg_tx, "-");
+        else strcat(sci->msg_tx, "0");
+
+        sprintf(aux, "%d", (int) abs(qout));
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < qlen)
+        {
+            for(i=0; i<(qlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux);
+
+        strcat(sci->msg_tx, "\n");
+
+        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+    }
+
+    if (sci->count == 3)
+    {
+        strcpy(sci->msg_tx, reset);
+
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "C");
+
+        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux2);
+
+        strcat(sci->msg_tx, "\n");
+    }
+
+    if (sci->count == 4)
+    {
+        strcpy(sci->msg_tx, reset);
+
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "S");
+
+        int n_decimal_points_precision = 100;
+        int integerPart = (int)soc;
+        int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
+
+        sprintf(aux, "%d", integerPart);
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < soclen)
+        {
+            for(i=0; i<(soclen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux);
+
+        strcat(sci->msg_tx, ".");
+
+        sprintf(aux, "%d", decimalPart);
+        strcat(sci->msg_tx, aux);
+
+        strcat(sci->msg_tx, "\n");
+
+        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+    }
+
+    if (sci->count == 5)
+    {
+        strcpy(sci->msg_tx, reset);
+
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "C");
+
+        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+        sci->len_msg = strlen(aux2);
+        if(sci->len_msg < sumlen)
+        {
+            for(i=0; i<(sumlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux2);
+
+        strcat(sci->msg_tx, "\n");
+
+        sci->count = -1;
+    }
+
+    sci->count += 1;
 }
 
 // Rx funtion
@@ -959,7 +960,7 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
         }
         if(rstart == 1)
         {
-            if(scimsg->msg_rx[i] == 70) break;
+            if(scimsg->msg_rx[i] == 10) break;
 
             if(aq1==1)
             {
