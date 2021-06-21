@@ -34,18 +34,18 @@
 #define PI_ICH_OUTMIN           0
 
 // Ganhos do controlador PI de tensão do conv. dc/dc no modo buck (carga das baterias)
-#define PI_VCH_KP               0.46331
-#define PI_VCH_KI               291.1038
+#define PI_VCH_KP               0.7336
+#define PI_VCH_KI               0.0922
 
 // Referências máximas de corrente de descarga e carga
 #define Ir_dis                   16
-#define Ir_ch                    7
+#define Ir_ch                    5
 
 // Limites para proteções
 #define OVER_CURRENT_DC_LIMIT_DISCHARGE      25
 #define OVER_CURRENT_DC_LIMIT_CHARGE         9
 #define DC_OVERVOLTAGE_LIMIT                 650
-#define BAT_OVERVOLTAGE_LIMIT                18*Nbat_series
+#define BAT_OVERVOLTAGE_LIMIT                15.5*Nbat_series
 #define BAT_UNDERVOLTAGE_LIMIT               9*Nbat_series
 
 // Definição das faltas

@@ -554,7 +554,7 @@ void main(void)
     // Enables CPU02 to load and wait for its loading loading through the finite loop
     ////Reminder. The CPIs that trigger interruption are 0,1,2 and 3. The others have no interruption and can be used as flags
     //
-    //while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
+    while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
     IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
     while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
     IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag

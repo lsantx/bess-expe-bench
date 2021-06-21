@@ -128,6 +128,21 @@ double c4;
 sFilter2nd fil2nVbat  = FILTER2ND_50Hz_DEFAULTS;
 sFilter2nd fil2nVdc   = FILTER2ND_50Hz_DEFAULTS;
 
+//Firs order LPF
+typedef struct {
+    float Un;
+    float Un_1;
+    float Yn_1;
+    float Yn;
+    float c0;
+    float c1;
+    } sFilter1st;
+#define FILTER_DEFAULTS_0_1_HZ {0,0,0,0,0.00006981317007977319,0.00006981317007977319}
+
+sFilter1st fil1nVbat = FILTER_DEFAULTS_0_1_HZ;
+sFilter1st fil1nVbat2 = FILTER_DEFAULTS_0_1_HZ;
+sFilter1st fil1nVbat3 = FILTER_DEFAULTS_0_1_HZ;
+
 //Canais para retirar offset
 typedef struct{
     int CH_1;
@@ -185,6 +200,7 @@ void TUPA_StopSequence(void);
 void Offset_Calculation(void);
 void TUPA_Ramp(Ramp *);
 void TUPA_Second_order_filter(sFilter2nd *);
+void TUPA_First_order_signals_filter(sFilter1st *);
 
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 //Variavel para ajuste do offset
@@ -211,7 +227,7 @@ float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
 float I_dis_ref   =  5;                         //Referência da corrente de descarga (modo Boost)
 float I_ch_ref    =  5;                         //Referência da corrente de carga (modo Buck)
-float Vboost      =  13.6;                      //Tensão de Boost
+float Vboost      =  13.8;                      //Tensão de Boost
 float Vfloat      =  13.6;                      //Tensão de Float
 float Vref        =  0;                         //Referência da tensão de carga
 
@@ -592,8 +608,8 @@ interrupt void adca1_isr(void)
 
            //Medição 1 da Tensão do banco de baterias
            entradas_dc.Vb1 = 0.400610162445055*AdccResultRegs.ADCRESULT1 - gn;
-           fil2nVbat.x = entradas_dc.Vb1;
-           TUPA_Second_order_filter(&fil2nVbat);          //filtra a tensão da bateria
+           fil1nVbat.Un = entradas_dc.Vb1;
+           TUPA_First_order_signals_filter(&fil1nVbat);          //filtra a tensão da bateria
 
            /*
            //Medição 2 da Tensão do banco de baterias
@@ -608,7 +624,7 @@ interrupt void adca1_isr(void)
             */
 
            //Média das medições do banco de baterias
-           entradas_dc.Vbt_filt = fil2nVbat.y;                //filtrado
+           entradas_dc.Vbt_filt = fil1nVbat.Yn;                //filtrado
            entradas_dc.Vbt      = entradas_dc.Vb1; //Não filtrado
            /////////////////////////////////Aquisição dos sinais//////////////////////////////////////////////////////
            if(flag.data_logo_init == 1)
@@ -880,6 +896,16 @@ void TUPA_Second_order_filter(sFilter2nd *filt)
     filt->x_ant  = filt->x;
     filt->y_ant2 = filt->y_ant;
     filt->y_ant  = filt->y;
+}
+
+// Low pass filter
+void TUPA_First_order_signals_filter(sFilter1st *x)
+{
+
+    x->Yn= (x->c0* x->Un) + (1-x->c1)*(x->Yn_1);
+    x->Un_1= x->Un;
+    x->Yn_1= x->Yn;
+
 }
 
 // Controlador PI
