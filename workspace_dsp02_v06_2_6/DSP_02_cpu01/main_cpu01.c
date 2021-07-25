@@ -327,12 +327,6 @@ Ssci scia_soc = SCI_DEFAULTS;
 Ssci scia_check1 = SCI_DEFAULTS;
 Ssci scia_check2 = SCI_DEFAULTS;
 Ssci scia_check3 = SCI_DEFAULTS;
-Ssci scib_p = SCI_DEFAULTS;
-Ssci scib_q = SCI_DEFAULTS;
-Ssci scib_soc = SCI_DEFAULTS;
-Ssci scib_check1 = SCI_DEFAULTS;
-Ssci scib_check2 = SCI_DEFAULTS;
-Ssci scib_check3 = SCI_DEFAULTS;
 
 typedef struct{
     float pref;
@@ -352,7 +346,6 @@ typedef struct{
 
 #define SCI_MSG_DEFAULTS {0,0,0,0,0,0,0,0,0,{0},{0},{0},{0}}
 Ssci_mesg sci_msgA = SCI_MSG_DEFAULTS;
-Ssci_mesg sci_msgB = SCI_MSG_DEFAULTS;
 ///////////////////////////////////////////// Functions ////////////////////////////////////////
 // Control
 void TUPA_abc2alfabeta(sABC *, sAlfaBeta *);

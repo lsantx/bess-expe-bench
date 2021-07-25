@@ -24,15 +24,9 @@ void  GPIO_Configure(void);
 // scia_fifo
 void scia_fifo_init(void);
 
-// scib_fifo
-void scib_fifo_init(void);
-
 //Interrup��es
 __interrupt void IPC1_INT(void);
 __interrupt void sciaTxFifoIsr(void);
 __interrupt void sciaRxFifoIsr(void);
-__interrupt void scibTxFifoIsr(void);
-__interrupt void scibRxFifoIsr(void);
-
 
 #endif /* PERIPHERAL_INTERRUPTION_SETUP_CPU01_H_ */

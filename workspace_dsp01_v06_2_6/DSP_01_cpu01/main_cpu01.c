@@ -335,12 +335,6 @@ Ssci scia_soc = SCI_DEFAULTS;
 Ssci scia_check1 = SCI_DEFAULTS;
 Ssci scia_check2 = SCI_DEFAULTS;
 Ssci scia_check3 = SCI_DEFAULTS;
-Ssci scib_p = SCI_DEFAULTS;
-Ssci scib_q = SCI_DEFAULTS;
-Ssci scib_soc = SCI_DEFAULTS;
-Ssci scib_check1 = SCI_DEFAULTS;
-Ssci scib_check2 = SCI_DEFAULTS;
-Ssci scib_check3 = SCI_DEFAULTS;
 
 typedef struct{
     float pref;
@@ -360,7 +354,6 @@ typedef struct{
 
 #define SCI_MSG_DEFAULTS {0,0,0,0,0,0,0,0,0,{0},{0},{0},{0}}
 Ssci_mesg sci_msgA = SCI_MSG_DEFAULTS;
-Ssci_mesg sci_msgB = SCI_MSG_DEFAULTS;
 
 //////////////////////////////////////////////Function//////////////////////////////////////////////
 void TxBufferAqu(Ssci_mesg *);
@@ -407,7 +400,6 @@ float soc = 25.4;
 char reset[len_sci] = {0};
 Uint16 reset_sci = 0;
 int32 flag_tx = 0;
-int32 flag_txb = 0;
 int flag_ena = 0;
 
 //Main
@@ -437,11 +429,6 @@ void main(void)
    GPIO_SetupPinOptions(28, GPIO_INPUT, GPIO_PUSHPULL);
    GPIO_SetupPinMux(29, GPIO_MUX_CPU1, 1);
    GPIO_SetupPinOptions(29, GPIO_OUTPUT, GPIO_ASYNC);
-
-   GPIO_SetupPinMux(23, GPIO_MUX_CPU1, 3);
-   GPIO_SetupPinOptions(23, GPIO_INPUT, GPIO_PUSHPULL);
-   GPIO_SetupPinMux(22, GPIO_MUX_CPU1, 3);
-   GPIO_SetupPinOptions(22, GPIO_OUTPUT, GPIO_ASYNC);
 //
 // Step 3. Clear all interrupts and initialize PIE vector table:
 // Disable CPU interrupts
@@ -481,13 +468,9 @@ void main(void)
     PieVectTable.IPC1_INT = &IPC1_INT; //function of the interruption of the IPC for communication of CPus
     PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption
     PieVectTable.SCIA_TX_INT = &sciaTxFifoIsr;  // SCI Rx interruption
-    PieVectTable.SCIB_RX_INT = &scibRxFifoIsr;  // SCI Tx interruption
-    PieVectTable.SCIB_TX_INT = &scibTxFifoIsr;  // SCI Rx interruption
     PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
     PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1 SCIA_RX
     PieCtrlRegs.PIEIER9.bit.INTx2 = 1;   // PIE Group 9, INT2 SCIA_TX
-    PieCtrlRegs.PIEIER9.bit.INTx4 = 1;   // PIE Group 9, INT1 SCIB_RX
-    PieCtrlRegs.PIEIER9.bit.INTx3 = 1;   // PIE Group 9, INT2 SCIB_TX
 // Enable global Interrupts and higher priority real-time debug events:
 //
     IER = M_INT1 | M_INT9; //Habilita a linha da tabela de interrup��o. correspondente ao ADC_B, pg 79 do material do workshop
@@ -499,9 +482,6 @@ void main(void)
 
 // Configure Init SCI-A - fifo
     scia_fifo_init();
-
-// Configure Init SCI-B - fifo
-    scib_fifo_init();
 //
 // Configure the ADC and power it up
 //
@@ -595,19 +575,6 @@ void main(void)
            SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
            SciaRegs.SCIFFTX.bit.SCIRST = 1;
          }
-
-         if ((reset_sci == 1) || (ScibRegs.SCIRXST.all != 0x0000))
-         {
-           ScibRegs.SCIFFTX.bit.TXFIFORESET = 0;
-           ScibRegs.SCIFFRX.bit.RXFIFORESET = 0;
-           ScibRegs.SCIFFTX.bit.SCIRST = 0;
-         }
-         else
-         {
-           ScibRegs.SCIFFTX.bit.TXFIFORESET = 1;
-           ScibRegs.SCIFFRX.bit.RXFIFORESET = 1;
-           ScibRegs.SCIFFTX.bit.SCIRST = 1;
-         }
     }
 }
 
@@ -652,38 +619,6 @@ interrupt void sciaTxFifoIsr(void)
     }
 
     SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
-}
-
-// scibTxFifoIsr - SCIB Transmit FIFO ISR - ex: IA+9999F
-interrupt void scibTxFifoIsr(void)
-{
-    Uint16 i;
-
-    if(flag_ena == 1)
-    {
-        if (flag_txb >= 130662)
-        {
-
-            TxBufferAqu(&sci_msgB);
-
-            for (i=0; i<len_sci; i++)
-            {
-                sci_msgB.sdata[i] = sci_msgB.msg_tx[i];
-            }
-
-            for(i=0; i < len_sci; i++)
-            {
-               ScibRegs.SCITXBUF.all=sci_msgB.sdata[i];  // Send data
-            }
-
-            flag_txb = -1;
-        }
-
-        flag_txb += 1;
-    }
-
-    ScibRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
 }
 
@@ -739,61 +674,6 @@ interrupt void sciaRxFifoIsr(void)
 
     SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
     SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
-
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ack
-}
-
-// scibRxFifoIsr - SCIB Receive FIFO ISR
-interrupt void scibRxFifoIsr(void)
-{
-    Uint16 i;
-    Uint16 soma_rx = 0;
-    float pref_temp = 0;
-    float qref_temp = 0;
-    float soc_temp = 0;
-
-    for(i=0;i<8;i++)
-    {
-        sci_msgB.rdata[i]=ScibRegs.SCIRXBUF.all;  // Read data
-    }
-
-    for (i=0; i<len_sci; i++)
-    {
-        sci_msgB.msg_rx[i] = sci_msgB.rdata[i];
-    }
-
-    scib_p.asci = 65;
-    scib_p.decimal = false;
-    pref_temp = RxBufferAqu(&scib_p, &sci_msgB);
-
-    scib_check1.asci = 67;               // C
-    scib_check1.decimal = false;
-    sci_msgB.check1 = RxBufferAqu(&scib_check1, &sci_msgB);
-
-    scib_q.asci = 82;
-    scib_q.decimal = false;
-    qref_temp = RxBufferAqu(&scib_q, &sci_msgB);
-
-    scib_check2.asci = 68;             // D
-    scib_check2.decimal = false;
-    sci_msgB.check2 = RxBufferAqu(&scib_check2, &sci_msgB);
-
-    scib_soc.asci = 83;
-    scib_soc.decimal = true;
-    soc_temp = RxBufferAqu(&scib_soc, &sci_msgB);
-
-    scib_check3.asci = 79;             // O
-    scib_check3.decimal = false;
-    sci_msgB.check3 = RxBufferAqu(&scib_check3, &sci_msgB);
-
-    soma_rx = sumAscii(sci_msgB.msg_rx, (int) len_sci);
-
-    if ((int) sci_msgB.check1 == soma_rx)   sci_msgB.pref = pref_temp;
-    if ((int) sci_msgB.check2 == soma_rx)   sci_msgB.qref = qref_temp;
-    if ((int) sci_msgB.check3 == soma_rx) sci_msgB.socref = soc_temp;
-
-    ScibRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
-    ScibRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
 
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ack
 }
