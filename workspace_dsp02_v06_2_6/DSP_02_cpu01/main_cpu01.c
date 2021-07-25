@@ -721,19 +721,6 @@ void main(void)
            SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
            SciaRegs.SCIFFTX.bit.SCIRST = 1;
        }
-
-       if ((reset_sci == 1) || (ScibRegs.SCIRXST.all != 0x0000))
-       {
-           ScibRegs.SCIFFTX.bit.TXFIFORESET = 0;
-           ScibRegs.SCIFFRX.bit.RXFIFORESET = 0;
-           ScibRegs.SCIFFTX.bit.SCIRST = 0;
-       }
-       else
-       {
-           ScibRegs.SCIFFTX.bit.TXFIFORESET = 1;
-           ScibRegs.SCIFFRX.bit.RXFIFORESET = 1;
-           ScibRegs.SCIFFTX.bit.SCIRST = 1;
-       }
     }
 }
 
