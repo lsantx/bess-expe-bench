@@ -407,6 +407,7 @@ float soc = 25.4;
 char reset[len_sci] = {0};
 Uint16 reset_sci = 0;
 int32 flag_tx = 0;
+int32 flag_txb = 0;
 int flag_ena = 0;
 
 //Main
@@ -657,22 +658,30 @@ interrupt void sciaTxFifoIsr(void)
 // scibTxFifoIsr - SCIB Transmit FIFO ISR - ex: IA+9999F
 interrupt void scibTxFifoIsr(void)
 {
-    // GpioDataRegs.GPBSET.bit.GPIO62 = 1;
     Uint16 i;
 
-    for(i=0; i < len_sci; i++)
+    if(flag_ena == 1)
     {
-       ScibRegs.SCITXBUF.all=sci_msgB.sdata[i];  // Send data
+        if (flag_txb >= 130662)
+        {
+
+            TxBufferAqu(&sci_msgB);
+
+            for (i=0; i<len_sci; i++)
+            {
+                sci_msgB.sdata[i] = sci_msgB.msg_tx[i];
+            }
+
+            for(i=0; i < len_sci; i++)
+            {
+               ScibRegs.SCITXBUF.all=sci_msgB.sdata[i];  // Send data
+            }
+
+            flag_txb = -1;
+        }
+
+        flag_txb += 1;
     }
-
-    TxBufferAqu(&sci_msgB);
-
-    for (i=0; i<len_sci; i++)
-    {
-        sci_msgB.sdata[i] = sci_msgB.msg_tx[i];
-    }
-
-    //GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
 
     ScibRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
