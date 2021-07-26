@@ -296,15 +296,6 @@ typedef struct{
 #define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
-//Variables to send data from CPU1 to CPU2
-typedef struct{
-    unsigned int send0;
-    float send1;
-}SsendCPU1toCPU2;
-
-#define SEND_DEFAULTS {0,0}
-SsendCPU1toCPU2 Send = SEND_DEFAULTS;
-
 //Variables to receive data from CPU1 to CPU2
 typedef struct{
     unsigned int *recv0;
@@ -693,8 +684,8 @@ void main(void)
               break;
 
               case 4:
-              AdcResults[resultsIndex]  = Send.send0;
-              AdcResults2[resultsIndex] = Send.send1;
+              AdcResults[resultsIndex]  = Van;
+              AdcResults2[resultsIndex] = Vbn;
               AdcResults3[resultsIndex] = Vcn;
               break;
 
@@ -754,11 +745,8 @@ interrupt void adcb1_isr(void)
     // Fun��o de in�cio de funcionamento do sistema
     TUPA_StartSequence();
 
-    //Vari�vel compartinlhada entre os n�cleos
-    Send.send0 = flag.Shutdown;
-
     //Envia a v�riaveis para o npucleo 2
-    IpcRegs.IPCSENDADDR = (Uint32) &Send.send0;
+    IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown;
     IpcRegs.IPCSET.bit.IPC2 = 1;
     IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
     IpcRegs.IPCSET.bit.IPC3 = 1;

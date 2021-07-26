@@ -198,15 +198,6 @@ typedef struct{
 #define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
-//V�riaveis para enviar dados do CPU2 para o CPU1
-typedef struct{
-    unsigned int send0;
-    float send1;
-}SsendCPU2toCPU1;
-
-#define SEND_DEFAULTS {0,0}
-SsendCPU2toCPU1 Send = SEND_DEFAULTS;
-
 //V�riaveis para receber dados do CPU1 para o CPU2
 typedef struct{
     unsigned int *recv0;
@@ -600,11 +591,8 @@ interrupt void adca1_isr(void)
     //Modo de Stand by, importante para desconectar este conversor do sistema sem acionar a prote��o do inversor e do outro conversor
     Stand_by_mode();
 
-    //Vari�vel compartilhada entre os n�cleos
-    Send.send0 = flag.Shutdown_Conv;
-
     //Envia a v�riaveis para o npucleo 2
-    IpcRegs.IPCSENDADDR = (Uint32) &Send.send0;
+    IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown_Conv;
     IpcRegs.IPCSET.bit.IPC1 = 1;
 
     IpcRegs.IPCSENDADDR = (Uint32) &soc_est.soc_out;
