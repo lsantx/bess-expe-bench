@@ -481,12 +481,14 @@ void main(void)
     EALLOW;
     PieVectTable.ADCB1_INT = &adcb1_isr;  //function for ADCB interrupt 1
     PieVectTable.IPC1_INT = &IPC1_INT; //function of the interruption of the IPC for communication of CPus
+    PieVectTable.IPC0_INT = &IPC0_INT;
     PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption
     PieVectTable.SCIA_TX_INT = &sciaTxFifoIsr;  // SCI Rx interruption
     PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
     PieCtrlRegs.PIEIER1.bit.INTx14 = 1;      //IPC1 interruption of intercommunication between CPUs. Enables the corresponding column 14
     PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1 SCIA_RX
     PieCtrlRegs.PIEIER9.bit.INTx2 = 1;   // PIE Group 9, INT2 SCIA_TX
+    PieCtrlRegs.PIEIER1.bit.INTx13 = 1;  //IPC0 interruption
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
@@ -732,6 +734,13 @@ interrupt void IPC1_INT(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
+interrupt void IPC0_INT(void)
+{
+    Recv.recv1 = IpcRegs.IPCRECVADDR;
+    IpcRegs.IPCACK.bit.IPC0 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
 interrupt void adcb1_isr(void)
 {
     GpioDataRegs.GPBSET.bit.GPIO62 = 1;                            // GPIO para verificar a freq de amostragem
@@ -751,6 +760,8 @@ interrupt void adcb1_isr(void)
     //Envia a v�riaveis para o npucleo 2
     IpcRegs.IPCSENDADDR = (Uint32) &Send.send0;
     IpcRegs.IPCSET.bit.IPC2 = 1;
+    IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
+    IpcRegs.IPCSET.bit.IPC3 = 1;
 
     // It is determine when a EPWMxSOCA pulse will be generated (Defining the sample frequency)
     //if(EPwm1Regs.ETSEL.bit.SOCASEL == 2) EPwm1Regs.ETSEL.bit.SOCASEL = 1;

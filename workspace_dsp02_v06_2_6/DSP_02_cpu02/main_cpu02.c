@@ -319,10 +319,12 @@ void main(void)
     PieVectTable.ADCA2_INT = &adca2_isr;     //function for ADCA interrupt 2
     PieVectTable.ADCA3_INT = &adca3_isr;     //function for ADCA interrupt 2
     PieVectTable.IPC2_INT = &IPC2_INT;       //fun��o da interrup��o do IPC para comunica��o das CPus
+    PieVectTable.IPC3_INT = &IPC3_INT;       //fun��o da interrup��o do IPC para comunica��o das CPus
     PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //Interrup��o ADC_A. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
     PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //Interrup��o ADC_A2. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
     PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //Interrup��o ADC_A3. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
     PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrup��o IPC2 de inter comunica��o entre os CPUS. Habilita a coluna 15 correspondente
+    PieCtrlRegs.PIEIER1.bit.INTx16 = 1;      //interrup��o IPC3 de inter comunica��o entre os CPUS. Habilita a coluna 15 correspondente
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
@@ -572,6 +574,14 @@ interrupt void IPC2_INT(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
+interrupt void IPC3_INT(void)
+{
+    Recv.recv1 = IpcRegs.IPCRECVADDR;
+    IpcRegs.IPCACK.bit.IPC3 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+
 /////////////////////////////////////////////////Interrup��es: Controle///////////////////////////////////
 // adca1_isr - Read ADC Buffer in ISR
 interrupt void adca1_isr(void)
@@ -596,6 +606,9 @@ interrupt void adca1_isr(void)
     //Envia a v�riaveis para o npucleo 2
     IpcRegs.IPCSENDADDR = (Uint32) &Send.send0;
     IpcRegs.IPCSET.bit.IPC1 = 1;
+
+    IpcRegs.IPCSENDADDR = (Uint32) &soc_est.soc_out;
+    IpcRegs.IPCSET.bit.IPC0 = 1;
 
     //Piscar o LED 3 em uma determinada frequecia
     Counts.count7 ++;
