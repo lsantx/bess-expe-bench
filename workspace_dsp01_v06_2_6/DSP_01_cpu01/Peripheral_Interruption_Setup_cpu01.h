@@ -26,7 +26,7 @@ void scia_fifo_init(void);
 
 //Interrup��es
 __interrupt void IPC1_INT(void);
-__interrupt void sciaTxFifoIsr(void);
 __interrupt void sciaRxFifoIsr(void);
+__interrupt void isr_cpu_timer0(void);
 
 #endif /* PERIPHERAL_INTERRUPTION_SETUP_CPU01_H_ */

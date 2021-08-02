@@ -404,6 +404,8 @@ volatile float pout = 0;
 float qout = 1000.54;
 float soc = 25.4;
 char reset[len_sci] = {0};
+char aux[4] = {0, 0, 0, 0};
+char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 Uint16 reset_sci = 0;
 int32 flag_tx = 0;
 int flag_ena = 0;
@@ -1333,13 +1335,11 @@ void TUPA_Ramp(Ramp *rmp)
 // Tx funtion
 void TxBufferAqu(Ssci_mesg *sci)
 {
-    char aux[4] = {0, 0, 0, 0};
-    char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Uint16 i = 0;
     Uint16 plen = 4;
     Uint16 qlen = 4;
     Uint16 soclen = 2;
-    Uint16 sumlen = 5;
+//    Uint16 sumlen = 5;
 
     if (sci->count == 0)
     {
@@ -1498,7 +1498,7 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
 {
     Uint16 rstart = 0;
     Uint16 aq1 = 0;
-    char aux[5] = {0, 0, 0, 0, 0};
+    char aux_rx[5] = {0, 0, 0, 0, 0};
     Uint16 k = 0;
     Uint16 i = 0;
     Uint16 j = 0;
@@ -1515,7 +1515,7 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
 
             if(aq1==1)
             {
-                aux[j] = (char) scimsg->rdata[i];
+                aux_rx[j] = (char) scimsg->rdata[i];
                 j += 1;
             }
             if(scimsg->rdata[i] == sci->asci)
@@ -1533,8 +1533,8 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
         if(k>=16) break;
     }
 
-    if (aq1 == 1 && sci->decimal == false) sci->sci_out = strtol(aux, NULL, 10);
-    if (aq1 == 1 && sci->decimal == true) sci->sci_out = strtof(aux, NULL);
+    if (aq1 == 1 && sci->decimal == false) sci->sci_out = strtol(aux_rx, NULL, 10);
+    if (aq1 == 1 && sci->decimal == true) sci->sci_out = strtof(aux_rx, NULL);
 
     return sci->sci_out;
 }

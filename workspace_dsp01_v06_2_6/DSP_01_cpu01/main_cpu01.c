@@ -398,6 +398,8 @@ volatile float pout = 0;
 float qout = 1000.54;
 float soc = 25.4;
 char reset[len_sci] = {0};
+char aux[4] = {0, 0, 0, 0};
+char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 Uint16 reset_sci = 0;
 int32 flag_tx = 0;
 int flag_ena = 0;
@@ -467,15 +469,18 @@ void main(void)
     EALLOW;
     PieVectTable.IPC1_INT = &IPC1_INT; //function of the interruption of the IPC for communication of CPus
     PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption
-    PieVectTable.SCIA_TX_INT = &sciaTxFifoIsr;  // SCI Rx interruption
+    PieVectTable.TIMER0_INT = &isr_cpu_timer0;  // SCI Tx interruption
+    EDIS;
     PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
     PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1 SCIA_RX
-    PieCtrlRegs.PIEIER9.bit.INTx2 = 1;   // PIE Group 9, INT2 SCIA_TX
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;   // Timer0
 // Enable global Interrupts and higher priority real-time debug events:
 //
     IER = M_INT1 | M_INT9; //Habilita a linha da tabela de interrup��o. correspondente ao ADC_B, pg 79 do material do workshop
 
-    EDIS;
+    InitCpuTimers();
+    ConfigCpuTimer(&CpuTimer0, 200, 50000);
+    CpuTimer0Regs.TCR.all = 0x4001;
 
 // Configure GPIOs
     GPIO_Configure();
@@ -563,18 +568,7 @@ void main(void)
     //Loop infinito
     while(1)
     {
-         if ((reset_sci == 1) || (SciaRegs.SCIRXST.all != 0x0000))
-         {
-           SciaRegs.SCIFFTX.bit.TXFIFORESET = 0;
-           SciaRegs.SCIFFRX.bit.RXFIFORESET = 0;
-           SciaRegs.SCIFFTX.bit.SCIRST = 0;
-         }
-         else
-         {
-           SciaRegs.SCIFFTX.bit.TXFIFORESET = 1;
-           SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
-           SciaRegs.SCIFFTX.bit.SCIRST = 1;
-         }
+
     }
 }
 
@@ -586,47 +580,36 @@ interrupt void IPC1_INT(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
-// sciaTxFifoIsr - SCIA Transmit FIFO ISR - ex: IA+9999F
-interrupt void sciaTxFifoIsr(void)
+// sciaTxFifo - SCIA Transmit FIFO - ex: IA+9999F
+interrupt void isr_cpu_timer0(void)
 {
     Uint16 i;
 
-    if(flag_ena == 1)
+    if (flag_ena == 1)
     {
-        if (flag_tx >= 130662)
+       TxBufferAqu(&sci_msgA);
+
+        for (i=0; i<len_sci; i++)
         {
-
-            GpioDataRegs.GPBSET.bit.GPIO62 = 1;
-
-            TxBufferAqu(&sci_msgA);
-
-            for (i=0; i<len_sci; i++)
-            {
-                sci_msgA.sdata[i] = sci_msgA.msg_tx[i];
-            }
-
-            for(i=0; i < len_sci; i++)
-            {
-               SciaRegs.SCITXBUF.all=sci_msgA.sdata[i];  // Send data
-            }
-
-            flag_tx = -1;
-
-            GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
+            sci_msgA.sdata[i] = sci_msgA.msg_tx[i];
         }
 
-        flag_tx += 1;
+        for(i=0; i < len_sci; i++)
+        {
+           SciaRegs.SCITXBUF.all=sci_msgA.sdata[i];  // Send data
+        }
+
+        SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
     }
 
-    SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ACK
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;       // Issue PIE ACK
 }
 
 // sciaRxFifoIsr - SCIA Receive FIFO ISR
 interrupt void sciaRxFifoIsr(void)
 {
     Uint16 i;
-    Uint16 soma_rx = 0;
+//    Uint16 soma_rx = 0;
     float pref_temp = 0;
     float qref_temp = 0;
     float soc_temp = 0;
@@ -636,15 +619,15 @@ interrupt void sciaRxFifoIsr(void)
         sci_msgA.rdata[i]= SciaRegs.SCIRXBUF.all;  // Read data
     }
 
-    soma_rx = sumAscii(sci_msgA.msg_rx, (int) len_sci);
+//    soma_rx = sumAscii(sci_msgA.msg_rx, (int) len_sci);
 
     scia_p.asci = 65;
     scia_p.decimal = false;
     pref_temp = RxBufferAqu(&scia_p, &sci_msgA);
 
-    scia_check1.asci = 67;               // C
-    scia_check1.decimal = false;
-    sci_msgA.check1 = RxBufferAqu(&scia_check1, &sci_msgA);
+//    scia_check1.asci = 67;               // C
+//    scia_check1.decimal = false;
+//    sci_msgA.check1 = RxBufferAqu(&scia_check1, &sci_msgA);
 
     sci_msgA.pref = pref_temp;
 
@@ -654,9 +637,9 @@ interrupt void sciaRxFifoIsr(void)
     scia_q.decimal = false;
     qref_temp = RxBufferAqu(&scia_q, &sci_msgA);
 
-    scia_check2.asci = 67;             // C
-    scia_check2.decimal = false;
-    sci_msgA.check2 = RxBufferAqu(&scia_check2, &sci_msgA);
+//    scia_check2.asci = 67;             // C
+//    scia_check2.decimal = false;
+//    sci_msgA.check2 = RxBufferAqu(&scia_check2, &sci_msgA);
 
     sci_msgA.qref = qref_temp;
 
@@ -666,9 +649,9 @@ interrupt void sciaRxFifoIsr(void)
     scia_soc.decimal = true;
     soc_temp = RxBufferAqu(&scia_soc, &sci_msgA);
 
-    scia_check3.asci = 67;             // C
-    scia_check3.decimal = false;
-    sci_msgA.check3 = RxBufferAqu(&scia_check3, &sci_msgA);
+//    scia_check3.asci = 67;             // C
+//    scia_check3.decimal = false;
+//    sci_msgA.check3 = RxBufferAqu(&scia_check3, &sci_msgA);
 
     sci_msgA.socref = soc_temp;
 
@@ -681,13 +664,11 @@ interrupt void sciaRxFifoIsr(void)
 // Tx funtion
 void TxBufferAqu(Ssci_mesg *sci)
 {
-    char aux[4] = {0, 0, 0, 0};
-    char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Uint16 i = 0;
     Uint16 plen = 4;
     Uint16 qlen = 4;
     Uint16 soclen = 2;
-    Uint16 sumlen = 5;
+//    Uint16 sumlen = 5;
 
     if (sci->count == 0)
     {
@@ -714,30 +695,30 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "\n");
 
-        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
+
+//    if (sci->count == 1)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "C");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "\n");
+//    }
 
     if (sci->count == 1)
-    {
-        strcpy(sci->msg_tx, reset);
-
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "C");
-
-        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-        sci->len_msg = strlen(aux2);
-        if(sci->len_msg < sumlen)
-        {
-            for(i=0; i<(sumlen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux2);
-
-        strcat(sci->msg_tx, "\n");
-    }
-
-    if (sci->count == 2)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -760,30 +741,30 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "\n");
 
-        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
 
-    if (sci->count == 3)
-    {
-        strcpy(sci->msg_tx, reset);
+//    if (sci->count == 2)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "C");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "\n");
+//    }
 
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "C");
-
-        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-        sci->len_msg = strlen(aux2);
-        if(sci->len_msg < sumlen)
-        {
-            for(i=0; i<(sumlen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux2);
-
-        strcat(sci->msg_tx, "\n");
-    }
-
-    if (sci->count == 4)
+    if (sci->count == 2)
     {
         strcpy(sci->msg_tx, reset);
 
@@ -811,30 +792,32 @@ void TxBufferAqu(Ssci_mesg *sci)
 
         strcat(sci->msg_tx, "\n");
 
-        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
-    }
-
-    if (sci->count == 5)
-    {
-        strcpy(sci->msg_tx, reset);
-
-        strcat(sci->msg_tx, "I");
-
-        strcat(sci->msg_tx, "C");
-
-        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
-        sci->len_msg = strlen(aux2);
-        if(sci->len_msg < sumlen)
-        {
-            for(i=0; i<(sumlen-sci->len_msg); i++)
-                strcat(sci->msg_tx, "0");
-        }
-        strcat(sci->msg_tx, aux2);
-
-        strcat(sci->msg_tx, "\n");
-
         sci->count = -1;
+
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
     }
+
+//    if (sci->count == 3)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "C");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "\n");
+//
+//        sci->count = -1;
+//    }
 
     sci->count += 1;
 }
@@ -844,7 +827,7 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
 {
     Uint16 rstart = 0;
     Uint16 aq1 = 0;
-    char aux[5] = {0, 0, 0, 0, 0};
+    char aux_rx[5] = {0, 0, 0, 0, 0};
     Uint16 k = 0;
     Uint16 i = 0;
     Uint16 j = 0;
@@ -861,7 +844,7 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
 
             if(aq1==1)
             {
-                aux[j] = (char) scimsg->rdata[i];
+                aux_rx[j] = (char) scimsg->rdata[i];
                 j += 1;
             }
             if(scimsg->rdata[i] == sci->asci)
@@ -879,8 +862,8 @@ float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
         if(k>=16) break;
     }
 
-    if (aq1 == 1 && sci->decimal == false) sci->sci_out = strtol(aux, NULL, 10);
-    if (aq1 == 1 && sci->decimal == true) sci->sci_out = strtof(aux, NULL);
+    if (aq1 == 1 && sci->decimal == false) sci->sci_out = strtol(aux_rx, NULL, 10);
+    if (aq1 == 1 && sci->decimal == true) sci->sci_out = strtof(aux_rx, NULL);
 
     return sci->sci_out;
 }
