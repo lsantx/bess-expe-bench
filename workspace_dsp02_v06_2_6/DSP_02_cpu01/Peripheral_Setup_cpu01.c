@@ -558,26 +558,23 @@ void GPIO_Configure()
 
 void scia_fifo_init(void)
 {
-   SciaRegs.SCICCR.all = 0x0007;      // 1 stop bit,  No loopback
-                                      // No parity,8 char bits,
-                                      // async mode, idle-line protocol
-   SciaRegs.SCICTL1.all = 0x0003;     // enable TX, RX, internal SCICLK,
-                                      // Disable RX ERR, SLEEP, TXWAKE
-   SciaRegs.SCICTL2.bit.TXINTENA = 1;
-   SciaRegs.SCICTL2.bit.RXBKINTENA = 1;
-   SciaRegs.SCIHBAUD.all = ((uint16_t)SCI_PRD  & 0xFF00U) >> 8U;
-   SciaRegs.SCILBAUD.all = (uint16_t)SCI_PRD  & 0x00FFU;
-//   SciaRegs.SCICCR.bit.LOOPBKENA = 1; // Enable loop back
-   SciaRegs.SCIFFTX.all = 0xC023;
-   SciaRegs.SCIFFRX.all = 0x023;
-   SciaRegs.SCIFFCT.all = 0x00;
+    SciaRegs.SCICCR.all = 0x0007;      // 1 stop bit,  No loopback
+                                       // No parity,8 char bits,
+                                       // async mode, idle-line protocol
+    SciaRegs.SCICTL1.all = 0x0003;     // enable TX, RX, internal SCICLK,
+                                       // Disable RX ERR, SLEEP, TXWAKE
+    SciaRegs.SCICTL2.bit.TXINTENA = 0;
+    SciaRegs.SCICTL2.bit.RXBKINTENA = 1;
+    SciaRegs.SCIHBAUD.all = 0;
+    SciaRegs.SCILBAUD.all = SCI_PRD;
+    SciaRegs.SCICCR.bit.LOOPBKENA = 0; // Enable loop back
+    SciaRegs.SCIFFTX.all = 0xC028;
+    SciaRegs.SCIFFRX.all = 0x0028;
+    SciaRegs.SCIFFCT.all = 0x00;
 
-   SciaRegs.SCIFFTX.bit.TXFFIL = 8;
-   SciaRegs.SCIFFRX.bit.RXFFIL = 8;
-
-   SciaRegs.SCICTL1.all = 0x0023;     // Relinquish SCI from Reset
-   SciaRegs.SCIFFTX.bit.TXFIFORESET = 1;
-   SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
+    SciaRegs.SCICTL1.all = 0x0023;     // Relinquish SCI from Reset
+    SciaRegs.SCIFFTX.bit.TXFIFORESET = 1;
+    SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
 }
 
 void Setup_DAC(void)

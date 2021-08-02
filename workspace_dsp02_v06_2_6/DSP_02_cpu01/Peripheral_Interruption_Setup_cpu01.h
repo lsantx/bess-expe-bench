@@ -28,7 +28,6 @@ void scia_fifo_init(void);
 __interrupt void adcb1_isr(void);
 __interrupt void IPC1_INT(void);
 __interrupt void IPC0_INT(void);
-__interrupt void sciaTxFifoIsr(void);
 __interrupt void sciaRxFifoIsr(void);
 
 
