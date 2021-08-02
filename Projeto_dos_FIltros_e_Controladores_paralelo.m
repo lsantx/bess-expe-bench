@@ -9,7 +9,7 @@ fsample = 9000;
 Ts = 1/fsample;
 format long
 
-fso = 2.5;                                                                  % frequência do filtro [Hz]
+fso = 0.1;                                                                  % frequência do filtro [Hz]
 
 Cf0 = Ts/(1/(2*pi*fso));
 Cf1 = Ts/(1/(2*pi*fso));

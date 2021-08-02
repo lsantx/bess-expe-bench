@@ -7,6 +7,9 @@
 //
 #include "F28x_Project.h"
 #include "math.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "Peripheral_Interruption_Setup_cpu01.h"
 #include "Tupa_parameters_cpu01.h"
@@ -160,7 +163,7 @@ typedef struct {
 
 sFilter1st Filt_freq_pll = FILTER_DEFAULTS;
 
-//Média móvel
+//Mï¿½dia mï¿½vel
 typedef struct{
 float array[N];
 float x;
@@ -292,7 +295,7 @@ typedef struct{
 #define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
-//Váriaveis para enviar dados do CPU1 para o CPU2
+//Vï¿½riaveis para enviar dados do CPU1 para o CPU2
 typedef struct{
     unsigned int send0;
     float send1;
@@ -301,7 +304,7 @@ typedef struct{
 #define SEND_DEFAULTS {0,0}
 SsendCPU1toCPU2 Send = SEND_DEFAULTS;
 
-//Váriaveis para receber dados do CPU1 para o CPU2
+//Vï¿½riaveis para receber dados do CPU1 para o CPU2
 typedef struct{
     unsigned int *recv0;
     float *recv1;
@@ -319,31 +322,68 @@ typedef struct{
 #define CONTATORES_DEFAULTS {0,3.0*Nsample*PWM_FREQ}
 Scontatores Contat_status = CONTATORES_DEFAULTS;
 
+typedef struct{
+    float sci_out;
+    Uint16 asci;
+    bool decimal;
+}Ssci;
+
+#define SCI_DEFAULTS {0,0,false}
+Ssci scia_p = SCI_DEFAULTS;
+Ssci scia_q = SCI_DEFAULTS;
+Ssci scia_soc = SCI_DEFAULTS;
+Ssci scia_check1 = SCI_DEFAULTS;
+Ssci scia_check2 = SCI_DEFAULTS;
+Ssci scia_check3 = SCI_DEFAULTS;
+
+typedef struct{
+    float pref;
+    float qref;
+    float socref;
+    float check1;
+    float check2;
+    float check3;
+    Uint16 soma_tx;
+    Uint16 len_msg;
+    int16 count;
+    char msg_tx[len_sci];
+    char msg_rx[len_sci];
+    Uint16 sdata[8];    // Send data
+    Uint16 rdata[8];    // Received data
+}Ssci_mesg;
+
+#define SCI_MSG_DEFAULTS {0,0,0,0,0,0,0,0,0,{0},{0},{0},{0}}
+Ssci_mesg sci_msgA = SCI_MSG_DEFAULTS;
+
+//////////////////////////////////////////////Function//////////////////////////////////////////////
+void TxBufferAqu(Ssci_mesg *);
+float RxBufferAqu(Ssci *, Ssci_mesg *);
+int sumAscii(char *string, int len);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
 
 //Variavel para ajuste do offset
 float inv_nro_muestras = 0;
 
-//Váriavel de teste
+//Vï¿½riavel de teste
 float  gn = 1;
-//#pragma DATA_SECTION(gn,"SHARERAMGS1");         // Coloca a variávei que será compartilhada com o CPU02 no seguinte segmento de memória
+//#pragma DATA_SECTION(gn,"SHARERAMGS1");         // Coloca a variï¿½vei que serï¿½ compartilhada com o CPU02 no seguinte segmento de memï¿½ria
 
 //Buffers para plot
 float32 AdcResults[RESULTS_BUFFER_SIZE];
 float32 AdcResults2[RESULTS_BUFFER_SIZE];
 float32 AdcResults3[RESULTS_BUFFER_SIZE];
 
-//Variaveis de comunicação entre o CPUs
+//Variaveis de comunicaï¿½ï¿½o entre o CPUs
 int send = 0;
 
-// Váriáveis de Controle
+// Vï¿½riï¿½veis de Controle
 float Ts = TSAMPLE;
 float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
-float  Iref = 0;                               //Referência de corrente (sem malha externa)
-float  Vdc_ref = 80;                      //Tensão de referência da tensão do dc-link;
-float  Q_ref   = 0;                               //Referência de potência reativa;
-float  Qm      = 0;                               //potência reativa medida
+float  Iref = 0;                               //Referï¿½ncia de corrente (sem malha externa)
+float  Vdc_ref = 80;                      //Tensï¿½o de referï¿½ncia da tensï¿½o do dc-link;
+float  Q_ref   = 0;                               //Referï¿½ncia de potï¿½ncia reativa;
+float  Qm      = 0;                               //potï¿½ncia reativa medida
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
@@ -352,6 +392,17 @@ Uint32 resultsIndex = 0;
 Uint32 first_scan = 1;
 Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0; Uint32 sum_CH4 = 0; Uint32 sum_CH5 = 0; Uint32 sum_CH6 = 0;
 Uint32 N_amostras = 60000;
+
+// SCI parameters
+volatile float pout = 0;
+float qout = 0;
+float soc = 0;
+char reset[len_sci] = {0};
+char aux[4] = {0, 0, 0, 0};
+char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+Uint16 reset_sci = 0;
+int32 flag_tx = 0;
+int flag_ena = 0;
 
 //Main
 void main(void)
@@ -371,6 +422,15 @@ void main(void)
 //
     InitGpio(); // Skipped for this example
 
+// init the pins for the SCI ports.
+//  GPIO_SetupPinMux() - Sets the GPxMUX1/2 and GPyMUX1/2 register bits
+//  GPIO_SetupPinOptions() - Sets the direction and configuration of the GPIOS
+// These functions are found in the F2837xD_Gpio.c file.
+//
+   GPIO_SetupPinMux(28, GPIO_MUX_CPU1, 1);
+   GPIO_SetupPinOptions(28, GPIO_INPUT, GPIO_PUSHPULL);
+   GPIO_SetupPinMux(29, GPIO_MUX_CPU1, 1);
+   GPIO_SetupPinOptions(29, GPIO_OUTPUT, GPIO_ASYNC);
 //
 // Step 3. Clear all interrupts and initialize PIE vector table:
 // Disable CPU interrupts
@@ -407,18 +467,26 @@ void main(void)
 // Map ISR functions
 //
     EALLOW;
-    PieVectTable.IPC1_INT = &IPC1_INT; //função da interrupção do IPC para comunicação das CPus
-    PieCtrlRegs.PIEIER1.bit.INTx14 = 1;      //interrupção IPC1 de inter comunicação entre os CPUS. Habilita a coluna 14 correspondente
-//
+    PieVectTable.IPC1_INT = &IPC1_INT; //function of the interruption of the IPC for communication of CPus
+    PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption
+    PieVectTable.TIMER0_INT = &isr_cpu_timer0;  // SCI Tx interruption
+    EDIS;
+    PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
+    PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1 SCIA_RX
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;   // Timer0
 // Enable global Interrupts and higher priority real-time debug events:
 //
-    IER |= M_INT1; //Habilita a linha da tabela de interrupção. correspondente ao ADC_B, pg 79 do material do workshop
+    IER = M_INT1 | M_INT9; //Habilita a linha da tabela de interrupï¿½ï¿½o. correspondente ao ADC_B, pg 79 do material do workshop
 
-    EDIS;
+    InitCpuTimers();
+    ConfigCpuTimer(&CpuTimer0, 200, 50000);
+    CpuTimer0Regs.TCR.all = 0x4001;
 
 // Configure GPIOs
     GPIO_Configure();
 
+// Configure Init SCI-A - fifo
+    scia_fifo_init();
 //
 // Configure the ADC and power it up
 //
@@ -440,7 +508,7 @@ void main(void)
     CpuSysRegs.PCLKCR0.bit.GTBCLKSYNC = 1;        // Turn on the Global clock
     EDIS;
 
-//Transfere o Controle dos periféricos ADC e EPWM para o núcleo 2
+//Transfere o Controle dos perifï¿½ricos ADC e EPWM para o nï¿½cleo 2
     EALLOW;
     DevCfgRegs.CPUSEL0.bit.EPWM6 = 1;                   // Transfer ownership of EPWM6 to CPU2
     DevCfgRegs.CPUSEL0.bit.EPWM9 = 1;                   // Transfer ownership of EPWM6 to CPU2
@@ -448,14 +516,14 @@ void main(void)
     DevCfgRegs.CPUSEL11.bit.ADC_A = 1;                  // Transfer ownership of ADC_A to CPU2
     DevCfgRegs.CPUSEL11.bit.ADC_B = 1;                  // Transfer ownership of ADC_B to CPU2
     DevCfgRegs.CPUSEL11.bit.ADC_C = 1;                  // Transfer ownership of ADC_C to CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS8 = 1;                //Configura o Bloco GS8 da memória RAM para o CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS9 = 1;                //Configura o Bloco GS9 da memória RAM para o CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS10= 1;                //Configura o Bloco GS10 da memória RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS8 = 1;                //Configura o Bloco GS8 da memï¿½ria RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS9 = 1;                //Configura o Bloco GS9 da memï¿½ria RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS10= 1;                //Configura o Bloco GS10 da memï¿½ria RAM para o CPU2
     EDIS;
 
     //
-    //Habilita o CPU02 Carregar e Aguarda o seu carregamento carregamento através do loop finito
-    ////Lembrete. Os IPCs que disparam interrupção são o 0,1,2 e 3. Os outros não tem interrupção e podem ser usados como flags
+    //Habilita o CPU02 Carregar e Aguarda o seu carregamento carregamento atravï¿½s do loop finito
+    ////Lembrete. Os IPCs que disparam interrupï¿½ï¿½o sï¿½o o 0,1,2 e 3. Os outros nï¿½o tem interrupï¿½ï¿½o e podem ser usados como flags
     //
     IpcRegs.IPCSET.bit.IPC5 = 1;                             //Seta o bit IPC5 para iniciar o carregamento do CPU02 carregar
     while (IpcRegs.IPCSTS.bit.IPC4 == 0);                    //Loop finito para aguardar o carregamento do CPU02
@@ -464,7 +532,7 @@ void main(void)
     // Habilita as GPIOs como ePwm
     InitEPwmGpio();
 
-    // Ativa o Tipzone dos PWM e desabilita os pulsos até o comando da flag.GSC_PulsesOn for habilitado
+    // Ativa o Tipzone dos PWM e desabilita os pulsos atï¿½ o comando da flag.GSC_PulsesOn for habilitado
     EALLOW;
     EPwm1Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM1
     EPwm1Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
@@ -477,7 +545,7 @@ void main(void)
     EPwm5Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
     EDIS;
 
-    //Habilita as Interrupções. A partir desse ponto as interrupções são chamadas quando requisitadas
+    //Habilita as Interrupï¿½ï¿½es. A partir desse ponto as interrupï¿½ï¿½es sï¿½o chamadas quando requisitadas
     EINT;  // Enable Global interrupt INTM
     ERTM;  // Enable Global realtime interrupt DBGM
 
@@ -491,20 +559,20 @@ void main(void)
 
     resultsIndex = 0;
 
-//Seta a variavel para ajuste do offset
-inv_nro_muestras = 1.0/N_amostras;
+    //Seta a variavel para ajuste do offset
+    inv_nro_muestras = 1.0/N_amostras;
 
-//Habilita o controlador PI da PLL
-pll_grid.PI_pll.enab = 1;
+    //Habilita o controlador PI da PLL
+    pll_grid.PI_pll.enab = 1;
 
-//Loop infinito
- while(1)
-{
+    //Loop infinito
+    while(1)
+    {
 
+    }
 }
-}
 
-//Interrupção do IPC1 para comunicação com a CPU02
+//Interrupï¿½ï¿½o do IPC1 para comunicaï¿½ï¿½o com a CPU02
 interrupt void IPC1_INT(void)
 {
     Recv.recv0 = IpcRegs.IPCRECVADDR;
@@ -512,8 +580,304 @@ interrupt void IPC1_INT(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
+// sciaTxFifo - SCIA Transmit FIFO - ex: IA+9999F
+interrupt void isr_cpu_timer0(void)
+{
+    Uint16 i;
 
+    if (flag_ena == 1)
+    {
+       TxBufferAqu(&sci_msgA);
 
+        for (i=0; i<len_sci; i++)
+        {
+            sci_msgA.sdata[i] = sci_msgA.msg_tx[i];
+        }
 
+        for(i=0; i < len_sci; i++)
+        {
+           SciaRegs.SCITXBUF.all=sci_msgA.sdata[i];  // Send data
+        }
 
-// Fim do código
+        SciaRegs.SCIFFTX.bit.TXFFINTCLR=1;   // Clear SCI Interrupt flag
+    }
+
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;       // Issue PIE ACK
+}
+
+// sciaRxFifoIsr - SCIA Receive FIFO ISR
+interrupt void sciaRxFifoIsr(void)
+{
+    Uint16 i;
+//    Uint16 soma_rx = 0;
+    float pref_temp = 0;
+    float qref_temp = 0;
+    float soc_temp = 0;
+
+    for(i=0;i<8;i++)
+    {
+        sci_msgA.rdata[i]= SciaRegs.SCIRXBUF.all;  // Read data
+    }
+
+//    soma_rx = sumAscii(sci_msgA.msg_rx, (int) len_sci);
+
+    scia_p.asci = 65;
+    scia_p.decimal = false;
+    pref_temp = RxBufferAqu(&scia_p, &sci_msgA);
+
+//    scia_check1.asci = 67;               // C
+//    scia_check1.decimal = false;
+//    sci_msgA.check1 = RxBufferAqu(&scia_check1, &sci_msgA);
+
+    sci_msgA.pref = pref_temp;
+
+    //    if ((int) sci_msgA.check1 == soma_rx)   sci_msgA.pref = pref_temp;
+
+    scia_q.asci = 82;
+    scia_q.decimal = false;
+    qref_temp = RxBufferAqu(&scia_q, &sci_msgA);
+
+//    scia_check2.asci = 67;             // C
+//    scia_check2.decimal = false;
+//    sci_msgA.check2 = RxBufferAqu(&scia_check2, &sci_msgA);
+
+    sci_msgA.qref = qref_temp;
+
+    //    if ((int) sci_msgA.check2 == soma_rx)   sci_msgA.qref = qref_temp;
+
+    scia_soc.asci = 83;
+    scia_soc.decimal = true;
+    soc_temp = RxBufferAqu(&scia_soc, &sci_msgA);
+
+//    scia_check3.asci = 67;             // C
+//    scia_check3.decimal = false;
+//    sci_msgA.check3 = RxBufferAqu(&scia_check3, &sci_msgA);
+
+    sci_msgA.socref = soc_temp;
+
+    SciaRegs.SCIFFRX.bit.RXFFOVRCLR=1;   // Clear Overflow flag
+    SciaRegs.SCIFFRX.bit.RXFFINTCLR=1;   // Clear Interrupt flag
+
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;       // Issue PIE ack
+}
+
+// Tx funtion
+void TxBufferAqu(Ssci_mesg *sci)
+{
+    Uint16 i = 0;
+    Uint16 plen = 4;
+    Uint16 qlen = 4;
+    Uint16 soclen = 2;
+//    Uint16 sumlen = 5;
+
+    if (sci->count == 0)
+    {
+        strcpy(sci->msg_tx, reset);
+
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "A");
+
+        if((int) pout >= 0) strcat(sci->msg_tx, "+");
+        else if((int) pout < 0) strcat(sci->msg_tx, "-");
+        else strcat(sci->msg_tx, "0");
+
+        sprintf(aux, "%d", (int) abs(pout));
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < plen)
+        {
+            for(i=0; i<(plen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux);
+
+        if(pout > 9000) pout = 0;
+
+        strcat(sci->msg_tx, "\n");
+
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+    }
+
+//    if (sci->count == 1)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "C");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "\n");
+//    }
+
+    if (sci->count == 1)
+    {
+        strcpy(sci->msg_tx, reset);
+
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "R");
+
+        if((int) qout >= 0) strcat(sci->msg_tx, "+");
+        else if((int) qout < 0) strcat(sci->msg_tx, "-");
+        else strcat(sci->msg_tx, "0");
+
+        sprintf(aux, "%d", (int) abs(qout));
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < qlen)
+        {
+            for(i=0; i<(qlen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux);
+
+        strcat(sci->msg_tx, "\n");
+
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+    }
+
+//    if (sci->count == 2)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "C");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "\n");
+//    }
+
+    if (sci->count == 2)
+    {
+        strcpy(sci->msg_tx, reset);
+
+        strcat(sci->msg_tx, "I");
+
+        strcat(sci->msg_tx, "S");
+
+        int n_decimal_points_precision = 100;
+        int integerPart = (int)soc;
+        int decimalPart = ((int)(soc*n_decimal_points_precision)%n_decimal_points_precision);
+
+        sprintf(aux, "%d", integerPart);
+        sci->len_msg = strlen(aux);
+        if(sci->len_msg < soclen)
+        {
+            for(i=0; i<(soclen-sci->len_msg); i++)
+                strcat(sci->msg_tx, "0");
+        }
+        strcat(sci->msg_tx, aux);
+
+        strcat(sci->msg_tx, ".");
+
+        sprintf(aux, "%d", decimalPart);
+        strcat(sci->msg_tx, aux);
+
+        strcat(sci->msg_tx, "\n");
+
+        sci->count = -1;
+
+//        sci->soma_tx = sumAscii(sci->msg_tx, (int) len_sci);
+    }
+
+//    if (sci->count == 3)
+//    {
+//        strcpy(sci->msg_tx, reset);
+//
+//        strcat(sci->msg_tx, "I");
+//
+//        strcat(sci->msg_tx, "C");
+//
+//        sprintf(aux2, "%d", (int) abs(sci->soma_tx));
+//        sci->len_msg = strlen(aux2);
+//        if(sci->len_msg < sumlen)
+//        {
+//            for(i=0; i<(sumlen-sci->len_msg); i++)
+//                strcat(sci->msg_tx, "0");
+//        }
+//        strcat(sci->msg_tx, aux2);
+//
+//        strcat(sci->msg_tx, "\n");
+//
+//        sci->count = -1;
+//    }
+
+    sci->count += 1;
+}
+
+// Rx funtion
+float RxBufferAqu(Ssci *sci, Ssci_mesg *scimsg)
+{
+    Uint16 rstart = 0;
+    Uint16 aq1 = 0;
+    char aux_rx[5] = {0, 0, 0, 0, 0};
+    Uint16 k = 0;
+    Uint16 i = 0;
+    Uint16 j = 0;
+
+    while (1)
+    {
+        if (scimsg->rdata[i] == 73 && rstart == 0)
+        {
+            rstart = 1;
+        }
+        if(rstart == 1)
+        {
+            if(scimsg->rdata[i] == 10) break;
+
+            if(aq1==1)
+            {
+                aux_rx[j] = (char) scimsg->rdata[i];
+                j += 1;
+            }
+            if(scimsg->rdata[i] == sci->asci)
+            {
+                aq1 = 1;
+                j = 0;
+            }
+        }
+
+        i += 1;
+        k += 1;
+
+        if(i>=len_sci) i = 0;
+
+        if(k>=16) break;
+    }
+
+    if (aq1 == 1 && sci->decimal == false) sci->sci_out = strtol(aux_rx, NULL, 10);
+    if (aq1 == 1 && sci->decimal == true) sci->sci_out = strtof(aux_rx, NULL);
+
+    return sci->sci_out;
+}
+
+int sumAscii(char *string, int len)
+{
+    int sum = 0;
+    int j = 0;
+
+    for (j = 0; j < len; j++)
+    {
+        sum = sum + string[j];
+    }
+    return sum;
+}
+
+// Fim do cï¿½digo

@@ -12,7 +12,7 @@ PAGE 0 :
    //RAMLS2      		: origin = 0x009000, length = 0x000800
    //RAMLS3      		: origin = 0x009800, length = 0x000800
    //RAMLS4      		: origin = 0x00A000, length = 0x000800
-   RAMLS04              : origin = 0x008000, length = 0x002800                       // Combinei todas as memórias para alocar o .text
+   RAMLS04              : origin = 0x008000, length = 0x002800                       // Combinei todas as memï¿½rias para alocar o .text
    RESET              	: origin = 0x3FFFC0, length = 0x000002
 
 PAGE 1 :
@@ -34,11 +34,11 @@ PAGE 1 :
    RAMGS8      : origin = 0x014000, length = 0x001000
    RAMGS9      : origin = 0x015000, length = 0x001000
    RAMGS10     : origin = 0x016000, length = 0x001000
-   RAMGS11     : origin = 0x017000, length = 0x001000
-   RAMGS12     : origin = 0x018000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
-   RAMGS13     : origin = 0x019000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
-   RAMGS14     : origin = 0x01A000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
-   RAMGS15     : origin = 0x01B000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
+   RAMGS11     : origin = 0x017000, length = 0x005000     // These memories are combined for requirements of the sprintf functions used in the tx interruption of the SCI communication
+   //RAMGS12     : origin = 0x018000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
+   //RAMGS13     : origin = 0x019000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
+   //RAMGS14     : origin = 0x01A000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
+   //RAMGS15     : origin = 0x01B000, length = 0x001000     /* Only Available on F28379D, F28377D, F28375D devices. Remove line on other devices. */
 
    CPU2TOCPU1RAM   : origin = 0x03F800, length = 0x000400
    CPU1TOCPU2RAM   : origin = 0x03FC00, length = 0x000400
@@ -52,19 +52,19 @@ SECTIONS
 {
    codestart        : > BEGIN,     PAGE = 0
 //   .text          : >>RAMM0 | RAMD0 |  RAMLS0 | RAMLS1 | RAMLS2 | RAMLS3 | RAMLS4,   PAGE = 0
-   .text            : > RAMLS04,   PAGE = 0
+   .text            : > RAMGS11,   PAGE = 1
    .cinit           : > RAMM0 | RAMD0,     PAGE = 0    //Acrescentei RAMD0
    .pinit           : > RAMM0,     PAGE = 0
    .switch          : > RAMM0,     PAGE = 0
    .reset           : > RESET,     PAGE = 0, TYPE = DSECT /* not used, */
 
    .stack           : > RAMM1,     PAGE = 1
-   .ebss            : > RAMGS5,    PAGE = 1     //juntei o RAMGS5, RAMGS6 e RAMGS7 para formar um único buffer
+   .ebss            : > RAMGS5,    PAGE = 1     //juntei o RAMGS5, RAMGS6 e RAMGS7 para formar um ï¿½nico buffer
    .econst          : > RAMLS5,    PAGE = 1
    .esysmem         : > RAMLS5,    PAGE = 1
    Filter_RegsFile  : > RAMGS0,	   PAGE = 1
 
-   SHARERAMGS1      : > RAMGS1,    PAGE = 1     //Memória compartilhada do CPU1 para o CPU2
+   SHARERAMGS1      : > RAMGS1,    PAGE = 1     //Memï¿½ria compartilhada do CPU1 para o CPU2
 
    ramgs0           : > RAMGS0,    PAGE = 1
    ramgs1           : > RAMGS1,    PAGE = 1

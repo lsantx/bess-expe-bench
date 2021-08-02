@@ -36,8 +36,8 @@ void ConfigureADC(void)
         acqps = 63; //320ns
     }
 
-    //Interrupção ADC_B INT1
-    AdcbRegs.ADCINTSEL1N2.bit.INT1SEL = 0; //end of SOC0 will set INT1 flag (Flag para inicio da interrupção. Todos os Socs estão sincronizados)
+    //Interrupï¿½ï¿½o ADC_B INT1
+    AdcbRegs.ADCINTSEL1N2.bit.INT1SEL = 0; //end of SOC0 will set INT1 flag (Flag para inicio da interrupï¿½ï¿½o. Todos os Socs estï¿½o sincronizados)
     AdcbRegs.ADCINTSEL1N2.bit.INT1E = 1;   //enable INT1 flag
     AdcbRegs.ADCINTFLGCLR.bit.ADCINT1 = 1; //make sure INT1 flag is cleared
 
@@ -166,7 +166,7 @@ void ConfigureEPWM(void)
 
     EDIS;
 
-    /* Vai ser ativado no núcleo 2 (Apagar)
+    /* Vai ser ativado no nï¿½cleo 2 (Apagar)
     // EPWM Module6 config
 
     EPwm6Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN;     // freeze counter
@@ -245,8 +245,6 @@ void ConfigureEPWM(void)
     EPwm10Regs.DBFED.bit.DBFED = 100; // Dead-band for falling-edge (100TBCLKs = 1us)
     EPwm10Regs.DBRED.bit.DBRED = 100; // Dead-band for rising-edge (100TBCLKs = 1us)
     */
-
-    EDIS;
 }
 
 void GPIO_Configure()
@@ -496,7 +494,7 @@ void GPIO_Configure()
     GpioCtrlRegs.GPBMUX1.bit.GPIO33  =  0; // GPIO33 = GPIO33
     GpioCtrlRegs.GPBDIR.bit.GPIO33   =  1; // GPIO33 = output
 
-/////////////////////////////// Gatedriver reset GPIO Initialization - Chopper - Output///////////////////////////////// OBS: Esse gate drive não tem reset. O pino do gatedrive correspondente ao reset é NC. Por isso, todos os pinos de reset é forçado para zero (Clear)
+/////////////////////////////// Gatedriver reset GPIO Initialization - Chopper - Output///////////////////////////////// OBS: Esse gate drive nï¿½o tem reset. O pino do gatedrive correspondente ao reset ï¿½ NC. Por isso, todos os pinos de reset ï¿½ forï¿½ado para zero (Clear)
     GpioCtrlRegs.GPAPUD.bit.GPIO27   =  0; // Enable pullup on GPIO27
     GpioDataRegs.GPACLEAR.bit.GPIO27 =  1; // Load output latch
     GpioCtrlRegs.GPAMUX2.bit.GPIO27  =  0; // GPIO27 = GPIO27
@@ -507,7 +505,7 @@ void GPIO_Configure()
     GpioCtrlRegs.GPBMUX2.bit.GPIO48  = 0;  // GPIO48 = GPIO48
     GpioCtrlRegs.GPBDIR.bit.GPIO48   = 0;  // GPIO48 = input
 
-/////////////////////////////// Gatedriver reset GPIO Initialization - Converters - Output///////////////////////////////// OBS: Esse gate drive não tem reset. O pino do gatedrive correspondente ao reset é NC. Por isso, todos os pinos de reset é forçado para zero (Clear)
+/////////////////////////////// Gatedriver reset GPIO Initialization - Converters - Output///////////////////////////////// OBS: Esse gate drive nï¿½o tem reset. O pino do gatedrive correspondente ao reset ï¿½ NC. Por isso, todos os pinos de reset ï¿½ forï¿½ado para zero (Clear)
     GpioCtrlRegs.GPBPUD.bit.GPIO32   =  0; // Enable pullup on GPIO32
     GpioDataRegs.GPBCLEAR.bit.GPIO32 =  1; // Load output latch
     GpioCtrlRegs.GPBMUX1.bit.GPIO32  =  0; // GPIO32 = GPIO32
@@ -538,24 +536,45 @@ void GPIO_Configure()
     GpioCtrlRegs.GPBDIR.bit.GPIO34   =  1; // GPIO31 = output
     GpioCtrlRegs.GPBCSEL1.bit.GPIO34 =  GPIO_MUX_CPU2; // CPU02 controla esta GPIO
 
-    //////////////////////// Comunicação DSP 2 - 1 //////////////////
-    //GPIO24 (Input) - Proteção
+    //////////////////////// Comunicaï¿½ï¿½o DSP 2 - 1 //////////////////
+    //GPIO24 (Input) - Proteï¿½ï¿½o
     GpioCtrlRegs.GPAPUD.bit.GPIO24  = 1;  // Enable pullup on GPIO24
     GpioCtrlRegs.GPAMUX2.bit.GPIO24 = 0;  // GPIO24 = GPIO24
     GpioCtrlRegs.GPADIR.bit.GPIO24  = 0;  // GPIO24 = input
 
-    //GPIO25 (Output) - Proteção
+    //GPIO25 (Output) - Proteï¿½ï¿½o
     GpioCtrlRegs.GPAPUD.bit.GPIO25   =  1; // Disable pullup on GPIO25
     GpioDataRegs.GPACLEAR.bit.GPIO25 =  1;   // Load output latch
     GpioCtrlRegs.GPAMUX2.bit.GPIO25  =  0; // GPIO25 = GPIO25
     GpioCtrlRegs.GPADIR.bit.GPIO25   =  1; // GPIO25 = output
 
-    //GPIO26 (Input) - Sincronização entre as DSPs dos dois Kits
+    //GPIO26 (Input) - Sincronizaï¿½ï¿½o entre as DSPs dos dois Kits
     GpioCtrlRegs.GPAPUD.bit.GPIO26  = 1;  // Enable pullup on GPIO26
     GpioCtrlRegs.GPAMUX2.bit.GPIO26 = 0;  // GPIO26 = GPIO26
     GpioCtrlRegs.GPADIR.bit.GPIO26  = 0;  // GPIO26 = input
 
     EDIS;
+}
+
+void scia_fifo_init(void)
+{
+    SciaRegs.SCICCR.all = 0x0007;      // 1 stop bit,  No loopback
+                                       // No parity,8 char bits,
+                                       // async mode, idle-line protocol
+    SciaRegs.SCICTL1.all = 0x0003;     // enable TX, RX, internal SCICLK,
+                                       // Disable RX ERR, SLEEP, TXWAKE
+    SciaRegs.SCICTL2.bit.TXINTENA = 0;
+    SciaRegs.SCICTL2.bit.RXBKINTENA = 1;
+    SciaRegs.SCIHBAUD.all = 0;
+    SciaRegs.SCILBAUD.all = SCI_PRD;
+    SciaRegs.SCICCR.bit.LOOPBKENA = 0; // Enable loop back
+    SciaRegs.SCIFFTX.all = 0xC028;
+    SciaRegs.SCIFFRX.all = 0x0028;
+    SciaRegs.SCIFFCT.all = 0x00;
+
+    SciaRegs.SCICTL1.all = 0x0023;     // Relinquish SCI from Reset
+    SciaRegs.SCIFFTX.bit.TXFIFORESET = 1;
+    SciaRegs.SCIFFRX.bit.RXFIFORESET = 1;
 }
 
 void Setup_DAC(void)

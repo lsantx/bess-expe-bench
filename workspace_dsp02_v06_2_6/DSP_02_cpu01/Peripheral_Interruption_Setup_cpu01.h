@@ -21,11 +21,14 @@ void ConfigureEPWM(void);
 //GPIo
 void  GPIO_Configure(void);
 
-//Interrupções
+// scia_fifo
+void scia_fifo_init(void);
+
+//Interrupï¿½ï¿½es
 __interrupt void adcb1_isr(void);
 __interrupt void IPC1_INT(void);
-
-
+__interrupt void IPC0_INT(void);
+__interrupt void sciaRxFifoIsr(void);
 
 
 #endif /* PERIPHERAL_INTERRUPTION_SETUP_CPU01_H_ */

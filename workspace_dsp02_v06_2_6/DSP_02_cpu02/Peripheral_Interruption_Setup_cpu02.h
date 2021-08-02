@@ -21,11 +21,12 @@ void ConfigureEPWM(void);
 //GPIo
 void  GPIO_Configure(void);
 
-//Interrupções
+//Interrupï¿½ï¿½es
 __interrupt void adca1_isr(void);
 __interrupt void adca2_isr(void);
 __interrupt void adca3_isr(void);
 __interrupt void IPC2_INT(void);
+__interrupt void IPC3_INT(void);
 
 
 

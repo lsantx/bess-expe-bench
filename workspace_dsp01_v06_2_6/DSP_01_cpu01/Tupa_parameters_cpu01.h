@@ -1,20 +1,32 @@
-#ifndef 	__TUPA_PARAMETERS_H__
-#define 	__TUPA_PARAMETERS_H__
+#ifndef     __TUPA_PARAMETERS_H__
+#define     __TUPA_PARAMETERS_H__
 
 
 
 // PWM DEFINITIONS
-#define PWM_FREQ                9000                             //Frequência de chaveamento
-#define Nsample                 2                           // Razão entre freq de amostragem e de chaveamento
-#define TSAMPLE                 1.0/(Nsample*PWM_FREQ)            //Período de amorstrage
-#define N                       (Nsample*PWM_FREQ)/20             // N Usado para o cálculo da média movel
+#define PWM_FREQ                9000                             //Frequï¿½ncia de chaveamento
+#define Nsample                 1                           // Razï¿½o entre freq de amostragem e de chaveamento
+#define TSAMPLE                 1.0/(Nsample*PWM_FREQ)            //Perï¿½odo de amorstrage
+#define N                       (Nsample*PWM_FREQ)/20             // N Usado para o cï¿½lculo da mï¿½dia movel
+
+// SCI Definitions
+#define CPU_FREQ        200E6
+#define LSPCLK_FREQ     CPU_FREQ/4
+#define SCI_FREQ        2700           // SCI Assync Baud (Baud rate).
+#define SCI_PRD         650            // 9600 bps. See man pg 2174 and 2184
+#define len_sci         8
 
 //Constantes
 #define DOISPI               6.283185307179586  // 2*PI
 #define Ts_div2              TSAMPLE*0.500000
 
-// Tamanho do Buffer de aquisição de dados
+// Tamanho do Buffer de aquisiï¿½ï¿½o de dados
 #define RESULTS_BUFFER_SIZE  2*(Nsample*PWM_FREQ/60)        //Ciclos*(Freq. de amostragem)/(freq.fundamental)
+
+// Tamanho do Buffer de aquisiï¿½ï¿½o de dados e limite de contagem
+#define N_data_log  600               // Aquisiï¿½ï¿½o de 5h
+//#define COUNT_LIM_LOG  270000         //Aquisiï¿½ï¿½o a cada 30s
+#define COUNT_LIM_LOG  4500           //Aquisiï¿½ï¿½o a cada 0.5s
 
 // Ganhos do controlador PI da PLL
 #define PI_PLL_GRID_KP         177
@@ -22,33 +34,34 @@
 #define PI_PLL_GRID_OUTMAX     550
 #define PI_PLL_GRID_OUTMIN    -550
 
-// Ganhos do controlador PI do Vdc (2Hz)
-#define PI_Vdc_KP         0.051149142071405
-#define PI_Vdc_KI         0.371097125480960
+// Ganhos do controlador PI do Vdc (0.5Hz)
+#define PI_Vdc_KP         0.019180928276777
+#define PI_Vdc_KI         0.034790355513840
 #define PI_Vdc_OUTMAX     50000
 #define PI_Vdc_OUTMIN    -50000
 
 // Ganhos do controlador PI do Reativo
-#define PI_Q_KI         62.831853
+#define PI_Q_KI         12.5664
 #define PI_Q_OUTMAX     50000
 #define PI_Q_OUTMIN    -50000
 
-// Limite de tempo para pré-carga
+// Limite de tempo para prï¿½-carga
 #define PRECHARGE_LIMIT        30/(TSAMPLE)      //6 segundos
 
 //Ganhos controladores PR
-#define PR_I_GRID_KP    10
-#define PR_I_GRID_KI    2000
-#define Ir              20
+#define PR_I_GRID_KP    5       //11
+#define PR_I_GRID_KI    1000
+#define Ir              36
 
-// Limites para proteções
-#define OVER_CURRENT_GRID_LIMIT   30
-#define DC_OVERVOLTAGE_LIMIT      200    //600
-#define DC_PRECHARGE_LIMIT        30    //276
-#define MAX_CHOPPER_LIMIT         150    //550
-#define MIN_CHOPPER_LIMIT         450    //450
+// Limites para proteï¿½ï¿½es
+#define OVER_CURRENT_GRID_LIMIT          30
+#define DC_OVERVOLTAGE_LIMIT             680
+#define DC_PRECHARGE_LIMIT               280
+#define DC_MANUAL_PRECHARGE_LIMIT        260
+#define MAX_CHOPPER_LIMIT                620
+#define MIN_CHOPPER_LIMIT                450
 
-// Definição das faltas
+// Definiï¿½ï¿½o das faltas
 #define FAULT_OK                0
 #define FAULT_DC_OVERVOLTAGE    1
 #define FAULT_DC_UNDERVOLTAGE   2
