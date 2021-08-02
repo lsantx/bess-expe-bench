@@ -674,6 +674,19 @@ interrupt void adca1_isr(void)
          TUPA_Ramp(&I1_Ramp);                      //Rampa de refer�ncia da corrente para o modo de descarga
          TUPA_Ramp(&VRamp);                          //Rampa da refer�ncia da tens�o para o modo de descarga
 
+         //////////////////////////////Communication///////////////////////////////////////////
+         if(*Recv.recv1>0)
+         {
+             flag.Bat_Mode = 1;
+             I_dis_ref = __divf32(*Recv.recv1, entradas_dc.Vbt_filt);
+
+         }
+         if(*Recv.recv1<0)
+         {
+             flag.Bat_Mode = 2;
+             I_ch_ref = - __divf32(*Recv.recv1, entradas_dc.Vbt_filt);
+
+         }
 
          ///////////////////////////////SOC Estimation/////////////////////////////////////////
          if(soc_est.enable == 1)
@@ -725,11 +738,12 @@ interrupt void adca1_isr(void)
             piv_ch.feedback =  entradas_dc.Vbt_filt;
             if(I_ch_ref>Ir_ch)  I_ch_ref = Ir_ch;                       //Trava I_dis_ref no valor m�ximo Ir_ch (Refer�ncia m�xima de corrente)
             piv_ch.outMin   = -10;
-            piv_ch.outMax   = __divf32(I_ch_ref,3);
+            piv_ch.outMax   = __divf32(I_ch_ref,Nb_int);
             TUPA_Pifunc(&piv_ch);
 
             //setpoint para a malha interna
-            pi_I1_ch.setpoint = piv_ch.output;
+//            pi_I1_ch.setpoint = piv_ch.output;
+            pi_I1_ch.setpoint =__divf32(I_ch_ref,Nb_int);
 
             //Malha interna - controle de corrente
 

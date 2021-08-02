@@ -395,8 +395,8 @@ Uint32 N_amostras = 60000;
 
 // SCI parameters
 volatile float pout = 0;
-float qout = 1000.54;
-float soc = 25.4;
+float qout = 0;
+float soc = 0;
 char reset[len_sci] = {0};
 char aux[4] = {0, 0, 0, 0};
 char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};

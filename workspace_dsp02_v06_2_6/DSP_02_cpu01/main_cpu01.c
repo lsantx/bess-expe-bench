@@ -401,8 +401,8 @@ Uint32 N_amostras = 60000;
 
 // SCI parameters
 volatile float pout = 0;
-float qout = 1000.54;
-float soc = 25.4;
+float qout = 0;
+float soc = 100;
 char reset[len_sci] = {0};
 char aux[4] = {0, 0, 0, 0};
 char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -741,6 +741,11 @@ interrupt void adcb1_isr(void)
     IpcRegs.IPCSET.bit.IPC2 = 1;
     IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
     IpcRegs.IPCSET.bit.IPC3 = 1;
+
+    Q_ref = sci_msgA.qref;
+    soc = *Recv.recv1;
+    pout = Pm;
+    qout = Qm;
 
     // It is determine when a EPWMxSOCA pulse will be generated (Defining the sample frequency)
     //if(EPwm1Regs.ETSEL.bit.SOCASEL == 2) EPwm1Regs.ETSEL.bit.SOCASEL = 1;
