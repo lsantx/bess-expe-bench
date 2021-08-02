@@ -739,13 +739,25 @@ interrupt void adcb1_isr(void)
     //Envia a v�riaveis para o npucleo 2
     IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown;
     IpcRegs.IPCSET.bit.IPC2 = 1;
-    IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
-    IpcRegs.IPCSET.bit.IPC3 = 1;
 
-    Q_ref = sci_msgA.qref;
-    soc = *Recv.recv1;
-    pout = Pm;
-    qout = Qm;
+    if(flag_ena == 1)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
+        IpcRegs.IPCSET.bit.IPC3 = 1;
+
+        Q_ref = sci_msgA.qref;
+        soc = *Recv.recv1;
+        pout = Pm;
+        qout = Qm;
+
+        flag_tx += 1;
+
+        if (flag_tx >= 450)
+        {
+            sciaTxFifo();
+            flag_tx = 0;
+        }
+    }
 
     // It is determine when a EPWMxSOCA pulse will be generated (Defining the sample frequency)
     //if(EPwm1Regs.ETSEL.bit.SOCASEL == 2) EPwm1Regs.ETSEL.bit.SOCASEL = 1;
@@ -969,17 +981,6 @@ interrupt void adcb1_isr(void)
        //EPwm6Regs.CMPA.bit.CMPA = sv_grid.Ta;
        //EPwm9Regs.CMPA.bit.CMPA = sv_grid.Tb;
        //EPwm10Regs.CMPA.bit.CMPA = sv_grid.Tc;
-
-       if(flag_ena == 1)
-       {
-           flag_tx += 1;
-
-           if (flag_tx >= 450)
-           {
-               sciaTxFifo();
-               flag_tx = 0;
-           }
-       }
     }
 
     GpioDataRegs.GPBCLEAR.bit.GPIO62 = 1;
