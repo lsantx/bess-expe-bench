@@ -199,10 +199,11 @@ typedef struct{
     unsigned int manual_pre_charge;
     unsigned int Com_DSP2_read;
     unsigned int data_logo_init;
+    unsigned int case_study;
 
 }sFlags;
 
-#define FLAGS_DEFAULTS {0,0,0,0,0,0,1,0,0,0,0,0}
+#define FLAGS_DEFAULTS {0,0,0,0,0,0,1,0,0,0,0,0,0}
 sFlags flag = FLAGS_DEFAULTS;
 
 //Ressonante
@@ -291,9 +292,10 @@ typedef struct{
     Uint32 count8;
     Uint32 count9;
     Uint16 count10;
+    Uint16 count11;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //Variables to receive data from CPU1 to CPU2
@@ -409,6 +411,9 @@ char aux2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 Uint16 reset_sci = 0;
 int32 flag_tx = 0;
 int flag_ena = 0;
+
+// Case Study
+int flag_case_study = 0;
 
 //Main
 void main(void)
@@ -820,6 +825,20 @@ interrupt void adcb1_isr(void)
        TUPA_First_order_signals_filter(&Filt_freq_Vdc);          //filtra a tens�o Vdc com o filtro de segunda ordem
        entradas_red.Vdc = Filt_freq_Vdc.Yn;
 
+       /////////////////////////////////Case Study////////////////////////////////////////////////////////////////
+       if (flag.case_study == 1)
+       {
+           flag.data_logo_init = 1;
+           Q_ref = 3000;
+
+           Counts.count11++;
+           if(resultsIndex2 > (N_data_log - 1))
+           {
+               flag.case_study = 0;
+               flag.data_logo_init = 0;
+           }
+       }
+
        /////////////////////////////////Aquisi��o dos sinais//////////////////////////////////////////////////////
 
        if(flag.data_logo_init == 1)
@@ -830,8 +849,8 @@ interrupt void adcb1_isr(void)
                  resultsIndex2++;
                  Counts.count9 = 0;
 
-                 aqui_sign1[resultsIndex2] = fil2nP.y;
-                 aqui_sign2[resultsIndex2] = fil2nQ.y;
+                 aqui_sign1[resultsIndex2] = pi_Q.setpoint;
+                 aqui_sign2[resultsIndex2] = Qm;
              }
          }
 

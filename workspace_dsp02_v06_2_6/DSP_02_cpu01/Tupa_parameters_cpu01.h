@@ -24,9 +24,9 @@
 #define RESULTS_BUFFER_SIZE  2*(Nsample*PWM_FREQ/60)        //Ciclos*(Freq. de amostragem)/(freq.fundamental)
 
 // Tamanho do Buffer de aquisi��o de dados e limite de contagem
-#define N_data_log  600               // Aquisi��o de 5h
+#define N_data_log  2200               // Aquisi��o de 2.2000
 //#define COUNT_LIM_LOG  270000         //Aquisi��o a cada 30s
-#define COUNT_LIM_LOG  4500           //Aquisi��o a cada 0.5s
+#define COUNT_LIM_LOG  9           //Aquisi��o a cada 2.2000
 
 // Ganhos do controlador PI da PLL
 #define PI_PLL_GRID_KP         177
