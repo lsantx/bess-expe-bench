@@ -251,22 +251,21 @@ sPR PR_Ib_11 = PR_I_11_DEFAULTS;
 
 //Ramp
 typedef struct{
-int   enab;
-float final;
-float final_ant;
-float atual;
-float in;
-float delta;
-int   flag;
-int   flag2;
-float range;
-float inc;
-} Ramp;
-
-#define VRamp_default {0,0,0,0,0,0,0,0,0.1,0.005}
-#define QRamp_default {0,0,0,0,0,0,0,0,0.1,0.06}
-Ramp VRamp = VRamp_default;
-Ramp QRamp = QRamp_default;
+    float t1;
+    float t1_ant;
+    float y;
+    float y_ant;
+    float uin;
+    float rate;
+    float Ts;
+    float rising;
+    float falling;
+} sRamp;
+#define PRamp_default {0,0,0,0,0,0,TSAMPLE,6e3,-6e3}
+#define VRamp_default {0,0,0,0,0,0,TSAMPLE,50,50}
+sRamp QRamp = PRamp_default;
+sRamp PRamp = PRamp_default;
+sRamp VRamp = VRamp_default;
 
 typedef struct{
     int CH_1;
@@ -354,7 +353,7 @@ void TUPA_StopSequence(void);
 void Offset_Calculation(void);
 void TUPA_First_order_signals_filter(sFilter1st *);
 void TUPA_PR(sPR *);
-void TUPA_Ramp(Ramp *);
+void TUPA_Ramp(sRamp *);
 void TUPA_Second_order_filter(sFilter2nd *);
 void TxBufferAqu(Ssci_mesg *);
 float RxBufferAqu(Ssci *, Ssci_mesg *);
@@ -387,7 +386,7 @@ float Ts = TSAMPLE;
 float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
 float  Iref = 0;
-float  Vdc_ref = 480;
+float  Vdc_ref = 0;
 float  Q_ref   = 0;
 float  Qm      = 0;
 float  Pm      = 0;
@@ -537,10 +536,10 @@ void main(void)
     // Enables CPU02 to load and wait for its loading loading through the finite loop
     ////Reminder. The CPIs that trigger interruption are 0,1,2 and 3. The others have no interruption and can be used as flags
     //
-    while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
-    IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
-    while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
-    IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag
+//    while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
+//    IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
+//    while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
+//    IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag
 
     // Enables ePwm GPIOs
     InitEPwmGpio();
@@ -610,9 +609,6 @@ void main(void)
            PR_Ib_5.enab = 1;
            PR_Ib_7.enab = 1;
            PR_Ib_11.enab = 1;
-           //Enable Ramps
-           VRamp.enab = 1;
-           QRamp.enab = 1;
 
            // Disable PWM Tipzone and enables pulses
            EALLOW;                // Enable EALLOW protected register access
@@ -642,9 +638,7 @@ void main(void)
            PR_Ib_5.enab = 0;
            PR_Ib_7.enab = 0;
            PR_Ib_11.enab = 0;
-           //Disable ramps
-           VRamp.enab = 0;
-           QRamp.enab = 0;
+
 
            // Enable PWM Tipzone and disables pulses
            EALLOW;
@@ -897,27 +891,26 @@ interrupt void adcb1_isr(void)
 
        TUPA_abc2alfabeta(&Iabc,&Ialfabeta);            // transformada abc para alfa-beta da corrente do inversor
 
-       ////////////////////////////////Controle da tens�o do dc-link (malha externa)///////////////////////////////
-       //Limita a refer�ncia de tens�o
-       if(Vdc_ref>580) Vdc_ref = 580;
-
-       //rampa da refer�ncia do Vdc
-       VRamp.final = Vdc_ref;
-       VRamp.in = entradas_red.Vdc;
-
-       TUPA_Ramp(&VRamp);                                      //Rampa de refer�ncia de tens�o para o dc-link
-
-       //controle PI
-       pi_Vdc.setpoint = VRamp.atual*VRamp.atual;
-       pi_Vdc.feedback = entradas_red.Vdc*entradas_red.Vdc;
-       TUPA_Pifunc(&pi_Vdc);                                   // Controle PI
-
-       ////////////////////////////////Controle do Reativo (malha externa)///////////////////////////////
        //Medi��o pot ativa Injetada
        Pm = 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.alfa + 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.beta;
        //Medi��o pot reativa Injetada
        Qm = 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.alfa - 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.beta;
 
+       ////////////////////////////////Controle da tens�o do dc-link (malha externa)///////////////////////////////
+       //Limita a refer�ncia de tens�o
+       if(Vdc_ref>580) Vdc_ref = 580;
+
+       //rampa da refer�ncia do Vdc
+       VRamp.uin = Vdc_ref;
+
+       TUPA_Ramp(&VRamp);                                      //Rampa de refer�ncia de tens�o para o dc-link
+
+       //controle PI
+       pi_Vdc.setpoint = VRamp.y*VRamp.y;
+       pi_Vdc.feedback = entradas_red.Vdc*entradas_red.Vdc;
+       TUPA_Pifunc(&pi_Vdc);                                   // Controle PI
+
+       ////////////////////////////////Controle do Reativo (malha externa)///////////////////////////////
        fil2nP.x = Pm;
        fil2nQ.x = Qm;
        TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
@@ -927,13 +920,12 @@ interrupt void adcb1_isr(void)
        if(Q_ref>5000) Q_ref = 5000;
 
        //rampa de varia��o da refer�ncia de reativo
-       QRamp.final = Q_ref;
-       QRamp.in    = fil2nQ.y;
+       QRamp.uin = Q_ref;
 
        TUPA_Ramp(&QRamp);                      //Rampa de refer�ncia da pot�ncia reativa
 
        // Controle
-       pi_Q.setpoint = QRamp.atual;
+       pi_Q.setpoint = QRamp.y;
        pi_Q.feedback = fil2nQ.y;
        TUPA_Pifunc(&pi_Q);                     // Controle PI
 
@@ -1311,50 +1303,18 @@ void TUPA_pwm(sABC *p_ABC, sSvm *svp, float Vdc, Uint16 fpwm_cnt)
 
 }
 
-// Ramp function
-void TUPA_Ramp(Ramp *rmp)
+// Rampa
+void TUPA_Ramp(sRamp *rmp)
 {
-    if(rmp->enab)
-    {
-        if(rmp->final != rmp->final_ant)
-        {
-            rmp->flag = 0;
-            rmp->flag2 = 1;
-        }
+  if(rmp->uin != rmp->y) rmp->t1 = rmp->t1 + rmp->Ts;
+  else rmp->t1 = 0;
+  rmp->rate = (rmp->uin - rmp->y_ant)/(rmp->t1 - rmp->t1_ant);
+  if(rmp->rate > rmp->rising) rmp->y = (rmp->t1 - rmp->t1_ant)*rmp->rising + rmp->y_ant;
+  else if(rmp->rate < rmp->falling) rmp->y = (rmp->t1 - rmp->t1_ant)*rmp->falling + rmp->y_ant;
+  else rmp->y = rmp->uin;
 
-        rmp->final_ant = rmp->final;
-
-        if(rmp->flag == 0)
-        {
-            rmp->atual = rmp->in;
-            rmp->flag = 1;
-        }
-
-        rmp->delta = rmp->final - rmp->atual;
-
-        if(rmp->flag2 == 1)
-        {
-            if(rmp->delta > 0)
-            {
-                rmp->atual += rmp->inc;
-                if(rmp->delta<=rmp->range)
-                {
-                    rmp->atual = rmp->final;
-                    rmp->flag2 = 0;
-                }
-            }
-            else if(rmp->delta < 0)
-            {
-                rmp->atual -= rmp->inc;
-                if(rmp->delta>=rmp->range)
-                {
-                    rmp->atual = rmp->final;
-                    rmp->flag2 = 0;
-                }
-
-            }
-        }
-    }
+  rmp->t1_ant = rmp->t1;
+  rmp->y_ant = rmp->y;
 }
 
 // Tx funtion
