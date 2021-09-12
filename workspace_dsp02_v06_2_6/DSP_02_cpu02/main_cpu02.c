@@ -198,7 +198,7 @@ typedef struct{
 #define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
-//V�riaveis para receber dados do CPU1 para o CPU2
+//Variaveis para receber dados do CPU1 para o CPU2
 typedef struct{
     unsigned int *recv0;
     float *recv1;
@@ -207,7 +207,7 @@ typedef struct{
 #define RECV_DEFAULTS {0,0}
 SrecvCPU1toCPU2 Recv = RECV_DEFAULTS;
 
-///////////////////////////////////////////// Fun��es ////////////////////////////////////////
+///////////////////////////////////////////// Funcoes ////////////////////////////////////////
 // Control
 void TUPA_Pifunc(sPI *);
 void TUPA_protect(void);
@@ -234,21 +234,21 @@ float32 AdcResults3[RESULTS_BUFFER_SIZE];
 float Vbat_vec[N_data_log] ;
 float Ibat_vec[N_data_log];
 
-//Variaveis de comunica��o entre o CPUs
+//Variaveis de comunicacao entre o CPUs
 int send = 0;
 
-//V�riaveis de teste
+//Variaveis de teste
 float  gn  = 937.5;
 
-// V�ri�veis de Controle
+// Variaveis de Controle
 float Ts = TSAMPLE;
 float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
-float I_dis_ref   =  5;                         //Refer�ncia da corrente de descarga (modo Boost)
-float I_ch_ref    =  5;                         //Refer�ncia da corrente de carga (modo Buck)
-float Vboost      =  14.4;                      //Tens�o de Boost
-float Vfloat      =  13.6;                      //Tens�o de Float
-float Vref        =  0;                         //Refer�ncia da tens�o de carga
+float I_dis_ref   =  5;                         //Referencia da corrente de descarga (modo Boost)
+float I_ch_ref    =  5;                         //Referencia da corrente de carga (modo Buck)
+float Vboost      =  14.4;                      //Tensao de Boost
+float Vfloat      =  13.6;                      //Tensao de Float
+float Vref        =  0;                         //Referencia da tensao de carga
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
@@ -311,22 +311,22 @@ void main(void)
     PieVectTable.ADCA1_INT = &adca1_isr;     //function for ADCA interrupt 1
     PieVectTable.ADCA2_INT = &adca2_isr;     //function for ADCA interrupt 2
     PieVectTable.ADCA3_INT = &adca3_isr;     //function for ADCA interrupt 2
-    PieVectTable.IPC2_INT = &IPC2_INT;       //fun��o da interrup��o do IPC para comunica��o das CPus
-    PieVectTable.IPC3_INT = &IPC3_INT;       //fun��o da interrup��o do IPC para comunica��o das CPus
-    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //Interrup��o ADC_A. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //Interrup��o ADC_A2. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //Interrup��o ADC_A3. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrup��o IPC2 de inter comunica��o entre os CPUS. Habilita a coluna 15 correspondente
-    PieCtrlRegs.PIEIER1.bit.INTx16 = 1;      //interrup��o IPC3 de inter comunica��o entre os CPUS. Habilita a coluna 15 correspondente
+    PieVectTable.IPC2_INT = &IPC2_INT;       //Funcao da interrupcao do IPC para comunicacao das CPus
+    PieVectTable.IPC3_INT = &IPC3_INT;       //Funcao da interrupcao do IPC para comunicacao das CPus
+    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //interrupcao ADC_A. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //interrupcao ADC_A2. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //interrupcao ADC_A3. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrupcao IPC2 de inter comunicacao entre os CPUS. Habilita a coluna 15 correspondente
+    PieCtrlRegs.PIEIER1.bit.INTx16 = 1;      //interrupcao IPC3 de inter comunicacao entre os CPUS. Habilita a coluna 15 correspondente
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
-    IER |= (M_INT10+M_INT1); //Habilita a linha da tabela de interrup��o. correspondente ao ADC_B, pg 79 do material do workshop
+    IER |= (M_INT10+M_INT1); //Habilita a linha da tabela de interrupcao. correspondente ao ADC_B, pg 79 do material do workshop
 
     EDIS;
 
-//Aguarda o CPU1 carregar as configura��es da mem�ria e dos perif�ricos. Ap�s isso, o CPU02 est� habilitado para continuar o carregamento dos perif�ricos associados a ele
-//Lembrete. Os IPCs que disparam interrup��o s�o o 0,1,2 e 3. Os outros n�o tem interrup��o e podem ser usados como flags
+//Aguarda o CPU1 carregar as configuracoes da memoria e dos perifericos. Apos isso, o CPU02 esta habilitado para continuar o carregamento dos perifericos associados a ele
+//Lembrete. Os IPCs que disparam interrupcao sao o 0,1,2 e 3. Os outros nao tem interrupcao e podem ser usados como flags
 
     while(IpcRegs.IPCSTS.bit.IPC5 == 0);          //Loop finito para aguardar o carregamento do CPU02
     IpcRegs.IPCACK.bit.IPC5 = 1;                  //Limpa a flag do IPC5
@@ -350,7 +350,7 @@ void main(void)
 
     EDIS;
 
-    // Ativa o Tipzone dos PWM e desabilita os pulsos at� o comando da flag.GSC_PulsesOn for habilitado
+    // Ativa o Tipzone dos PWM e desabilita os pulsos ate o comando da flag.GSC_PulsesOn for habilitado
     EALLOW;
     EPwm6Regs.TZSEL.bit.OSHT1  = 0x1; // TZ1 configured for OSHT trip of ePWM6
     EPwm6Regs.TZCTL.bit.TZA    = 0x2;   // Trip action set to force-low for output A
@@ -363,10 +363,10 @@ void main(void)
     EPwm10Regs.TZCTL.bit.TZB   = 0x2;   // Trip action set to force-low for output B
     EDIS;
 
-    //Informa ao CPU1 que o n�cleo 2 j� foi carregado
+    //Informa ao CPU1 que o nucleo 2 ja foi carregado
     IpcRegs.IPCSET.bit.IPC4 = 1;
 
-    //Habilita as Interrup��es. A partir desse ponto as interrup��es s�o chamadas quando requisitadas
+    //Habilita as Interrupcoes. A partir desse ponto as interrupcoes sao chamadas quando requisitadas
     EINT;  // Enable Global interrupt INTM
     ERTM;  // Enable Global realtime interrupt DBGM
 
@@ -380,7 +380,7 @@ void main(void)
 
     resultsIndex = 0;
 
-    // Inicializa os buffers de aquisi��o de sinal
+    // Inicializa os buffers de aquisicao de sinal
      for(resultsIndex2 = 0; resultsIndex2 < N_data_log; resultsIndex2++)
      {
          Vbat_vec[resultsIndex2] = 0;
@@ -411,7 +411,7 @@ inv_nro_muestras = 1.0/N_amostras;
         //
         // These functions are in the F2837xD_EPwm.c file
         //
-        if(flag.BSC_PulsesOn == 1 && flag.Conv_on == 1) ////OBS:Amarrar depois aqui se a pre carga foi conclu�da
+        if(flag.BSC_PulsesOn == 1 && flag.Conv_on == 1) ////OBS:Amarrar depois aqui se a pre carga foi concluida
         //if(flag.BSC_PulsesOn == 1)
         {
            //Habilita os controladores PIs
@@ -424,10 +424,10 @@ inv_nro_muestras = 1.0/N_amostras;
            piv_ch.enab   = 1;
 
            //Habilita as rampas
-           I1_Ramp.enab = 1;           //rampa da corrente do bra�o 1
-           I2_Ramp.enab = 1;           //rampa da corrente do bra�o 2
-           I3_Ramp.enab = 1;           //rampa da corrente do bra�o 3
-           VRamp.enab   = 1;            //rampa da tens�o para o modo Buck  (Carga)
+           I1_Ramp.enab = 1;           //rampa da corrente do braco 1
+           I2_Ramp.enab = 1;           //rampa da corrente do braco 2
+           I3_Ramp.enab = 1;           //rampa da corrente do braco 3
+           VRamp.enab   = 1;            //rampa da tensao para o modo Buck  (Carga)
 
 
            if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
@@ -489,10 +489,10 @@ inv_nro_muestras = 1.0/N_amostras;
            piv_ch.enab    = 0;
 
            //Desabilita as rampas
-           I1_Ramp.enab = 0;           //rampa da corrente do bra�o 1
-           I2_Ramp.enab = 0;           //rampa da corrente do bra�o 2
-           I3_Ramp.enab = 0;           //rampa da corrente do bra�o 3
-           VRamp.enab   = 0;            //rampa da tens�o para o modo Buck  (Carga)
+           I1_Ramp.enab = 0;           //rampa da corrente do braco 1
+           I2_Ramp.enab = 0;           //rampa da corrente do braco 2
+           I3_Ramp.enab = 0;           //rampa da corrente do braco 3
+           VRamp.enab   = 0;            //rampa da tensao para o modo Buck  (Carga)
 
            // Ativa o Tipzone dos PWM e desabilita os pulsos
            EALLOW;
@@ -510,7 +510,7 @@ inv_nro_muestras = 1.0/N_amostras;
         }
 
 
-        // Sele��o das vari�veis que ser�o plotadas no gr�fico do Gui Composer
+        // Selecao das variaveis que serao plotadas no grafico do Gui Composer
         if(flag.real_time_buff == 1)
         {
            switch(selecao_plot)
@@ -559,7 +559,7 @@ inv_nro_muestras = 1.0/N_amostras;
 }
 }
 
-//Interrup��o do IPC2 para comunica��o com a CPU02
+//interrupcao do IPC2 para comunicacao com a CPU02
 interrupt void IPC2_INT(void)
 {
     Recv.recv0 = IpcRegs.IPCRECVADDR;
@@ -575,25 +575,25 @@ interrupt void IPC3_INT(void)
 }
 
 
-/////////////////////////////////////////////////Interrup��es: Controle///////////////////////////////////
+/////////////////////////////////////////////////Interrupcoes: Controle///////////////////////////////////
 // adca1_isr - Read ADC Buffer in ISR
 interrupt void adca1_isr(void)
 {
     GpioDataRegs.GPCSET.bit.GPIO64 = 1;                            // GPIO para verificar a freq de amostragem
 
-    // Fun��o de Prote��o
+    // Funcao de Protecao
     TUPA_protect();
 
-    // Fun��o de parada de funcionamento do sistema
+    // Funcao de parada de funcionamento do sistema
     TUPA_StopSequence();
 
-    // Fun��o de in�cio de funcionamento do sistema
+    // Funcao de inicio de funcionamento do sistema
     TUPA_StartSequence();
 
-    //Modo de Stand by, importante para desconectar este conversor do sistema sem acionar a prote��o do inversor e do outro conversor
+    //Modo de Stand by, importante para desconectar este conversor do sistema sem acionar a protecao do inversor e do outro conversor
     Stand_by_mode();
 
-    //Envia a v�riaveis para o npucleo 2
+    //Envia a Variaveis para o npucleo 2
     IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown_Conv;
     IpcRegs.IPCSET.bit.IPC1 = 1;
 
@@ -610,8 +610,8 @@ interrupt void adca1_isr(void)
         Counts.count7 = 0;
     }
 
-    // Update the buffers with the ADCResults. Se flag.real_time_buff for igual a 1, os buffers s�o atualizados a cada per�odo de amostragem
-    // Caso contr�rio, os buffers param de ser atualizados e os dados da mem�ria podem ser exportados
+    // Update the buffers with the ADCResults. Se flag.real_time_buff for igual a 1, os buffers sao atualizados a cada periodo de amostragem
+    // Caso contrario, os buffers param de ser atualizados e os dados da memoria podem ser exportados
 
     if(flag.real_time_buff == 1)
     {
@@ -622,42 +622,42 @@ interrupt void adca1_isr(void)
        }
     }
 
-    //Verifica o offset das medi��es
+    //Verifica o offset das medicoes
     if(first_scan == 1)
     {
         Offset_Calculation();
     }
     else
     {
-           //Correntes do Bra�o 1 do Conv cc/cc
+           //Correntes do braco 1 do Conv cc/cc
            entradas_dc.I1 = 0.007316831214635*AdcaResultRegs.ADCRESULT0 - 0.007316831214635*channel_offset.CH_1;
 
-           //Tens�o do Dc-link
+           //Tensao do Dc-link
            fil2nVdc.x = 0.328687*AdccResultRegs.ADCRESULT0 - 764.5;
            TUPA_Second_order_filter(&fil2nVdc);
            entradas_dc.Vdc = fil2nVdc.y;
 
-           //Medi��o 1 da Tens�o do banco de baterias
+           //Medicao 1 da Tensao do banco de baterias
            entradas_dc.Vb1 = 0.400610162445055*AdccResultRegs.ADCRESULT1 - gn;
            fil1nVbat.Un = entradas_dc.Vb1;
-           TUPA_First_order_signals_filter(&fil1nVbat);          //filtra a tens�o da bateria
+           TUPA_First_order_signals_filter(&fil1nVbat);          //filtra a tensao da bateria
 
            /*
-           //Medi��o 2 da Tens�o do banco de baterias
+           //Medicao 2 da Tensao do banco de baterias
            entradas_dc.Vb2 = 0.401798078111343*AdccResultRegs.ADCRESULT2 - 0.401798078111343*channel_offset.CH_5 + 12.45;
            MAVv2bat.x = entradas_dc.Vb2;
-           TUPA_Moving_Average(&MAVv2bat);          //filtra a tens�o da bateria com a m�dia m�vel
+           TUPA_Moving_Average(&MAVv2bat);          //filtra a tensao da bateria com a media movel
 
-           //Medi��o 3 da Tens�o do banco de baterias
+           //Medicao 3 da Tensao do banco de baterias
            entradas_dc.Vb3 = 0.403297325473409*AdccResultRegs.ADCRESULT3 - 0.403297325473409*channel_offset.CH_6 + 12.45;
            MAVv3bat.x = entradas_dc.Vb3;
-           TUPA_Moving_Average(&MAVv3bat);          //filtra a tens�o da bateria com a m�dia m�vel
+           TUPA_Moving_Average(&MAVv3bat);          //filtra a tensao da bateria com a media movel
             */
 
-           //M�dia das medi��es do banco de baterias
+           //Media das medicoes do banco de baterias
            entradas_dc.Vbt_filt = fil1nVbat.Yn;                //filtrado
-           entradas_dc.Vbt      = entradas_dc.Vb1; //N�o filtrado
-           /////////////////////////////////Aquisi��o dos sinais//////////////////////////////////////////////////////
+           entradas_dc.Vbt      = entradas_dc.Vb1; //nao filtrado
+           /////////////////////////////////Aquisicao dos sinais//////////////////////////////////////////////////////
            if(flag.data_logo_init == 1)
            {
                Counts.count9++;
@@ -673,8 +673,8 @@ interrupt void adca1_isr(void)
            }
 
          ///////////////////////////////Rampas////////////////////////////////////////////////
-         TUPA_Ramp(&I1_Ramp);                      //Rampa de refer�ncia da corrente para o modo de descarga
-         TUPA_Ramp(&VRamp);                          //Rampa da refer�ncia da tens�o para o modo de descarga
+         TUPA_Ramp(&I1_Ramp);                      //Rampa de Referencia da corrente para o modo de descarga
+         TUPA_Ramp(&VRamp);                          //Rampa da Referencia da tensao para o modo de descarga
 
          //////////////////////////////Communication///////////////////////////////////////////
          if(*Recv.recv1>0.0001)
@@ -710,8 +710,8 @@ interrupt void adca1_isr(void)
         //////////////////////////////////controle de Corrente modo Boost (Descarga)//////////////////////////////
         if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
         {
-            //rampa de varia��o das correntes nos tr�s bra�os
-            if(I_dis_ref>Ir_dis)  I_dis_ref = Ir_dis;                       //Trava I_dis_ref no valor m�ximo Ir_dis (Refer�ncia m�xima de corrente)
+            //rampa de variacao das correntes nos tres bracos
+            if(I_dis_ref>Ir_dis)  I_dis_ref = Ir_dis;                       //Trava I_dis_ref no valor maximo Ir_dis (Referencia maxima de corrente)
             I1_Ramp.final = __divf32(I_dis_ref,Nb_int);
             I1_Ramp.in    = __divf32(entradas_dc.I1+entradas_dc.I2+entradas_dc.I3,Nb_int);
             I2_Ramp.final = I1_Ramp.final;
@@ -729,26 +729,26 @@ interrupt void adca1_isr(void)
         }
         else
         {
-            //Reseta as rampas de corrente: Importante para que no pr�ximo ciclo a rampa atue
+            //Reseta as rampas de corrente: Importante para que no proximo ciclo a rampa atue
             I1_Ramp.final = 0;
             I2_Ramp.final = 0;
             I3_Ramp.final = 0;
         }
 
-        //////////////////////////////////controle do modo Buck (Carga a Corrente e Tens�o Constante)/////////////////////
+        //////////////////////////////////controle do modo Buck (Carga a Corrente e Tensao Constante)/////////////////////
         if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
         {
-            //Refer�ncia e rampa da tens�o
-            Vref = Vboost*Nbat_series;       //seta a refer�ncia de tens�o para a tens�o de boost
+            //Referencia e rampa da tensao
+            Vref = Vboost*Nbat_series;       //seta a Referencia de tensao para a tensao de boost
             VRamp.final = Vref;
             VRamp.in =  entradas_dc.Vbt_filt;
 
-           // Malha externa - controle da tens�o
+           // Malha externa - controle da tensao
 
             //Controlador PI
             piv_ch.setpoint =  VRamp.atual;
             piv_ch.feedback =  entradas_dc.Vbt_filt;
-            if(I_ch_ref>Ir_ch)  I_ch_ref = Ir_ch;                       //Trava I_dis_ref no valor m�ximo Ir_ch (Refer�ncia m�xima de corrente)
+            if(I_ch_ref>Ir_ch)  I_ch_ref = Ir_ch;                       //Trava I_dis_ref no valor maximo Ir_ch (Referencia maxima de corrente)
             piv_ch.outMin   = -10;
             piv_ch.outMax   = __divf32(I_ch_ref,Nb_int);
             TUPA_Pifunc(&piv_ch);
@@ -762,13 +762,13 @@ interrupt void adca1_isr(void)
             //Controle de Corrente (PI)
             pi_I1_ch.feedback = -entradas_dc.I1;
             TUPA_Pifunc(&pi_I1_ch);
-            //refer�ncia para o PWM
+            //Referencia para o PWM
             pwm_dc.din = pi_I1_ch.output;
 
         }
         else
         {
-            //Reseta a rampa de tens�o: Importante para que no pr�ximo ciclo a rampa atue
+            //Reseta a rampa de tensao: Importante para que no proximo ciclo a rampa atue
             VRamp.final = 0;
         }
 
@@ -780,9 +780,9 @@ interrupt void adca1_isr(void)
         //EPwm6Regs.CMPA.bit.CMPA = (50000000/PWM_FREQ)*0.5;
     }
 
-   //Limpa a Flag da interrup��o. Se n�o limpar, a interrup��o n�o � chamada novamente
+   //Limpa a Flag da interrupcao. Se nao limpar, a interrupcao nao e chamada novamente
    AdcaRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;  //ADC Interrupt 1 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
-   PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Limpa a flag da interrup��o da correspondente linha. Se n�o fazer isso, uma nova interrup��o n�o � poss�vel pq essa flag n�o � limpa
+   PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Limpa a flag da interrupcao da correspondente linha. Se nao fazer isso, uma nova interrupcao nao e possivel pq essa flag nao e limpa
 }
 
 // adca2_isr - Read ADC Buffer in ISR
@@ -790,21 +790,21 @@ interrupt void adca2_isr(void)
 {
     GpioDataRegs.GPCSET.bit.GPIO66 = 1;                            // GPIO para verificar a freq
 
-    // Fun��o de Prote��o
+    // Funcao de Protecao
     TUPA_protect();
 
-    //Verifica o offset das medi��es
+    //Verifica o offset das medicoes
     if(first_scan2 == 1)
     {
         Offset_Calculation();
     }
     else
     {
-       //Corrente do Bra�o 2 do Conv cc/cc
+       //Corrente do braco 2 do Conv cc/cc
         entradas_dc.I2 = 0.007310862860686*AdcaResultRegs.ADCRESULT1 - 0.007310862860686*channel_offset.CH_2;
 
         ///////////////////////////////Rampas////////////////////////////////////////////////
-        TUPA_Ramp(&I2_Ramp);                      //Rampa de refer�ncia da corrente para o modo de descarga
+        TUPA_Ramp(&I2_Ramp);                      //Rampa de Referencia da corrente para o modo de descarga
 
 
         //////////////////////////////////controle de Corrente modo Boost (Descarga)/////////////////////
@@ -824,13 +824,13 @@ interrupt void adca2_isr(void)
         if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
         {
 
-            // Refer�ncia de corrente para equaliza��o
+            // Referencia de corrente para equalizacao
             pi_I2_ch.setpoint = pi_I1_ch.setpoint;    //setpoint para a malha interna para balancear as correntes
 
             //Controle de Corrente
             pi_I2_ch.feedback = -entradas_dc.I2;
             TUPA_Pifunc(&pi_I2_ch);
-            //refer�ncia para o PWM
+            //Referencia para o PWM
             pwm_dc2.din = pi_I2_ch.output;
         }
 
@@ -841,9 +841,9 @@ interrupt void adca2_isr(void)
         //EPwm9Regs.CMPA.bit.CMPA = (50000000/PWM_FREQ)*0.5;
     }
 
-    //Limpa a Flag da interrup��o. Se n�o limpar, a interrup��o n�o � chamada novamente
+    //Limpa a Flag da interrupcao. Se nao limpar, a interrupcao nao e chamada novamente
     AdcaRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;  //ADC Interrupt 2 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP10; //Limpa a flag da interrup��o da correspondente linha. Se n�o fazer isso, uma nova interrup��o n�o � poss�vel pq essa flag n�o � limpa
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP10; //Limpa a flag da interrupcao da correspondente linha. Se nao fazer isso, uma nova interrupcao nao e possivel pq essa flag nao e limpa
 }
 
 // adca3_isr - Read ADC Buffer in ISR
@@ -851,21 +851,21 @@ interrupt void adca3_isr(void)
 {
     GpioDataRegs.GPCSET.bit.GPIO68 = 1;                            // GPIO para verificar a freq
 
-    // Fun��o de Prote��o
+    // Funcao de Protecao
     TUPA_protect();
 
-    //Verifica o offset das medi��es
+    //Verifica o offset das medicoes
     if(first_scan3 == 1)
     {
         Offset_Calculation();
     }
     else
     {
-        //Corrente do Bra�o 2 do Conv cc/cc
+        //Corrente do braco 2 do Conv cc/cc
          entradas_dc.I3 = 0.007432592601990*AdcaResultRegs.ADCRESULT2 - 0.007432592601990*channel_offset.CH_3;
 
          ///////////////////////////////Rampas////////////////////////////////////////////////
-         TUPA_Ramp(&I3_Ramp);                      //Rampa de refer�ncia da corrente
+         TUPA_Ramp(&I3_Ramp);                      //Rampa de Referencia da corrente
 
          //////////////////////////////////controle de Corrente modo Boost (Descarga)/////////////////////
          if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
@@ -882,13 +882,13 @@ interrupt void adca3_isr(void)
          //////////////////////////////////controle de Corrente modo Buck (Carga a Corrente Constante)/////////////////////
          if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
          {
-             // Refer�ncia de corrente para equaliza��o
+             // Referencia de corrente para equalizacao
              pi_I3_ch.setpoint = pi_I1_ch.setpoint;    //setpoint para a malha interna para balancear as correntes
 
              //Controle de Corrente
              pi_I3_ch.feedback = -entradas_dc.I3;
              TUPA_Pifunc(&pi_I3_ch);
-             //refer�ncia para o PWM
+             //Referencia para o PWM
              pwm_dc3.din = pi_I3_ch.output;
          }
 
@@ -899,13 +899,13 @@ interrupt void adca3_isr(void)
          //EPwm10Regs.CMPA.bit.CMPA = (50000000/PWM_FREQ)*0.5;
     }
 
-    //Limpa a Flag da interrup��o. Se n�o limpar, a interrup��o n�o � chamada novamente
+    //Limpa a Flag da interrupcao. Se nao limpar, a interrupcao nao e chamada novamente
     AdcaRegs.ADCINTFLGCLR.bit.ADCINT3 = 1;  //ADC Interrupt 3 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP10; //Limpa a flag da interrup��o da correspondente linha. Se n�o fazer isso, uma nova interrup��o n�o � poss�vel pq essa flag n�o � limpa
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP10; //Limpa a flag da interrupcao da correspondente linha. Se nao fazer isso, uma nova interrupcao nao e possivel pq essa flag nao é limpa
 }
 
-//////////////////////////////////////////////////Fun��es de Controle//////////////////////////////////////
-// Fun��o Rampa
+//////////////////////////////////////////////////Funcoes de Controle//////////////////////////////////////
+// Funcao Rampa
 void TUPA_Ramp(Ramp *rmp)
 {
     if(rmp->enab)
@@ -1056,11 +1056,11 @@ void soc_estimation(sSoc *soc)
     soc->soc_out = 100*(1-(soc->q/soc->tsc)/soc->qn);
 }
 
-/////////////////////////////////////Fun��es de Sistema//////////////////////////////////////////
-// Fun��o de Prote��o do Sistema
+/////////////////////////////////////Funcoes de Sistema//////////////////////////////////////////
+// Funcao de Protecao do Sistema
 void TUPA_protect(void)
 {
-    // Prote��o de sobrecorrente no Conversor cc/cc
+    // Protecao de sobrecorrente no Conversor cc/cc
     //Descarga
    if (flag.Bat_Discharge == 1)
    {
@@ -1103,7 +1103,7 @@ void TUPA_protect(void)
       }
   }
 
-   // Prote��o de sobretens�o na bateria
+   // Protecao de sobretensao na bateria
    if(entradas_dc.Vbt_filt > BAT_OVERVOLTAGE_LIMIT)
    {
        Counts.count8++;
@@ -1121,7 +1121,7 @@ void TUPA_protect(void)
    }
 
    /*
-   // Prote��o de subtens�o na bateria
+   // Protecao de subtensao na bateria
    if(entradas_dc.Vbt_mav < BAT_UNDERVOLTAGE_LIMIT && flag.Shutdown_Conv == 1)
    {
          Counts.count10++;
@@ -1139,7 +1139,7 @@ void TUPA_protect(void)
    */
 
 
-   // Prote��o de sobretens�o no dc-link
+   // Protecao de sobretensao no dc-link
    if(entradas_dc.Vdc > DC_OVERVOLTAGE_LIMIT)
    {
        Counts.count4++;
@@ -1161,17 +1161,17 @@ void TUPA_protect(void)
 
 }
 
-// Fun��o de in�cio de funcionamento do sistema
+// Funcao de inicio de funcionamento do sistema
 void TUPA_StartSequence(void)
 {
-    //Verifica se a flag Shutdown est� acionado
+    //Verifica se a flag Shutdown esta acionado
     ////OBS: (Amarrar depois dos testes)
      if(flag.Shutdown_Conv == 0)
      {
          if(*Recv.recv0 == 0) flag.AbleToStart = 1;
 
-         //Verifica se a flag do interleaved est� habilitada. Fecha contatores entre baterias e Conversor cc/cc
-         //OBS:Ap�s conectar o conv no dc-link, colocar que esses contatores s� podem ser acionados se   flag.precharge_ok est� ok.
+         //Verifica se a flag do interleaved esta habilitada. Fecha contatores entre baterias e Conversor cc/cc
+         //OBS:Apos conectar o conv no dc-link, colocar que esses contatores so podem ser acionados se   flag.precharge_ok esta ok.
           // Inicia o Start do sistema
           if(flag.Conv_on == 1)
           {
@@ -1182,10 +1182,10 @@ void TUPA_StartSequence(void)
      }
 }
 
-// Fun��o de parada de funcionamento do sistema
+// Funcao de parada de funcionamento do sistema
 void TUPA_StopSequence(void)
 {
-    //Verifica se a flag Shutdown_conv est� acionado ou se a Shutdown da CPU1 est� acionada (IPC6) e interrompe o chaveamento e abre os contatores
+    //Verifica se a flag Shutdown_conv esta acionado ou se a Shutdown da CPU1 esta acionada (IPC6) e interrompe o chaveamento e abre os contatores
      if(flag.Shutdown_Conv == 1)
      {
          flag.AbleToStart = 0;
@@ -1203,7 +1203,7 @@ void TUPA_StopSequence(void)
 // Modo de Standy by do conversor
 void Stand_by_mode(void)
 {
-    //Verifica se a flag Shutdown_conv est� acionado ou se a Shutdown da CPU1 est� acionada (IPC6) e interrompe o chaveamento e abre os contatores
+    //Verifica se a flag Shutdown_conv esta acionado ou se a Shutdown da CPU1 esta acionada (IPC6) e interrompe o chaveamento e abre os contatores
      if(flag.Stand_by == 1)
      {
          flag.Conv_on = 0;                             // Reseta o valor de flag.Conv_on
@@ -1217,10 +1217,10 @@ void Stand_by_mode(void)
 
 }
 
-// Calculo do offset das medi��es do conv 1
+// Calculo do offset das medicoes do conv 1
 void Offset_Calculation(void)
 {
-    if(AdcaRegs.ADCINTFLG.bit.ADCINT1 == 1) // Veirifica se a interrup��o 1 foi setada
+    if(AdcaRegs.ADCINTFLG.bit.ADCINT1 == 1) // Veirifica se a interrupcao 1 foi setada
     {
         // Calcula o offset
         if(Counts.count1 < N_amostras)
@@ -1237,7 +1237,7 @@ void Offset_Calculation(void)
         }
     }
 
-    if(AdcaRegs.ADCINTFLG.bit.ADCINT2 == 1) // Veirifica se a interrup��o 2 foi setada
+    if(AdcaRegs.ADCINTFLG.bit.ADCINT2 == 1) // Veirifica se a interrupcao 2 foi setada
     {
         // Calcula o offset
         if(Counts.count5 < N_amostras)
@@ -1255,7 +1255,7 @@ void Offset_Calculation(void)
 
     }
 
-    if(AdcaRegs.ADCINTFLG.bit.ADCINT3 == 1) // Veirifica se a interrup��o 3 foi setada
+    if(AdcaRegs.ADCINTFLG.bit.ADCINT3 == 1) // Veirifica se a interrupcao 3 foi setada
     {
         // Calcula o offset
         if(Counts.count6 < N_amostras)

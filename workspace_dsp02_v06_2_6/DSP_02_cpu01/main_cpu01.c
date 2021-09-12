@@ -200,10 +200,12 @@ typedef struct{
     unsigned int Com_DSP2_read;
     unsigned int data_logo_init;
     unsigned int case_study;
+    unsigned int vdc_control;
+    unsigned int p_control;
 
 }sFlags;
 
-#define FLAGS_DEFAULTS {0,0,0,0,0,0,1,0,0,0,0,0,0}
+#define FLAGS_DEFAULTS {0,0,0,0,0,0,1,0,0,0,0,0,0,0,0}
 sFlags flag = FLAGS_DEFAULTS;
 
 //Ressonante
@@ -527,9 +529,9 @@ void main(void)
     DevCfgRegs.CPUSEL0.bit.EPWM10 = 1;                   // Transfer ownership of EPWM10 to CPU2
     DevCfgRegs.CPUSEL11.bit.ADC_A = 1;                  // Transfer ownership of ADC_A to CPU2
     DevCfgRegs.CPUSEL11.bit.ADC_C = 1;                  // Transfer ownership of ADC_C to CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS8 = 1;                //Configura o Bloco GS8 da mem�ria RAM para o CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS9 = 1;                //Configura o Bloco GS9 da mem�ria RAM para o CPU2
-    MemCfgRegs.GSxMSEL.bit.MSEL_GS10= 1;                //Configura o Bloco GS10 da mem�ria RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS8 = 1;                //Configura o Bloco GS8 da memoria RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS9 = 1;                //Configura o Bloco GS9 da memoria RAM para o CPU2
+    MemCfgRegs.GSxMSEL.bit.MSEL_GS10= 1;                //Configura o Bloco GS10 da memoria RAM para o CPU2
     EDIS;
 
     //
@@ -741,16 +743,16 @@ interrupt void adcb1_isr(void)
 {
     GpioDataRegs.GPBSET.bit.GPIO62 = 1;                            // GPIO para verificar a freq de amostragem
 
-    // Fun��o de Prote��o
+    // Funcao de Protecao
     TUPA_protect();
 
-    // Fun��o de parada de funcionamento do sistema
+    // Funcao de parada de funcionamento do sistema
     TUPA_StopSequence();
 
-    // Fun��o de in�cio de funcionamento do sistema
+    // Funcao de inicio de funcionamento do sistema
     TUPA_StartSequence();
 
-    //Envia a v�riaveis para o npucleo 2
+    //Envia a variaveis para o nucleo 2
     IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown;
     IpcRegs.IPCSET.bit.IPC2 = 1;
 
@@ -787,8 +789,8 @@ interrupt void adcb1_isr(void)
         Counts.count7 = 0;
     }
 
-    // Update the buffers with the ADCResults. Se flag.real_time_buff for igual a 1, os buffers s�o atualizados a cada per�odo de amostragem
-    // Caso contr�rio, os buffers param de ser atualizados e os dados da mem�ria podem ser exportados
+    // Update the buffers with the ADCResults. Se flag.real_time_buff for igual a 1, os buffers sao atualizados a cada periodo de amostragem
+    // Caso contrario, os buffers param de ser atualizados e os dados da memoria podem ser exportados
 
     if(flag.real_time_buff == 1)
     {
@@ -799,13 +801,13 @@ interrupt void adcb1_isr(void)
        }
     }
 
-    /* Sa�da para o DAC
+    /* Saida para o DAC
     EALLOW;
     DacaRegs.DACVALS.bit.DACVALS = (uint16_t) (1500 * (1 + __cos(376.99111*t)));
     EDIS;
     */
 
-    //Verifica o offset das medi��es
+    //Verifica o offset das medicoes
     if(first_scan == 1)
     {
        Offset_Calculation();
@@ -813,12 +815,12 @@ interrupt void adcb1_isr(void)
     else
     {
        ////////////////////////////////////////// Leitura dos sensores////////////////////////////////////////////////////////////////q
-       // Tens�es de Linha
+       // Tensoes de Linha
        entradas_red.Vca = 0.251556520094124*AdcdResultRegs.ADCRESULT0 - 0.251556520094124*channel_offset.CH_1;
        entradas_red.Vbc = 0.252383078685275*AdcdResultRegs.ADCRESULT1 - 0.252383078685275*channel_offset.CH_2;
        entradas_red.Vab = 0.252185841566323*AdcdResultRegs.ADCRESULT2 - 0.252185841566323*channel_offset.CH_3;
 
-       // Estima��o das tens�es de fase
+       // Estimacao das tensaes de fase
        entradas_red.Va = (entradas_red.Vab - entradas_red.Vca)*0.333333333333333;
        entradas_red.Vb = (entradas_red.Vbc - entradas_red.Vab)*0.333333333333333;
        entradas_red.Vc = (entradas_red.Vca - entradas_red.Vbc)*0.333333333333333;
@@ -829,9 +831,9 @@ interrupt void adcb1_isr(void)
        entradas_red.Ib = -(0.014542328746540*AdcbResultRegs.ADCRESULT1 - 0.014542328746540*channel_offset.CH_5);
        entradas_red.Ic = -(0.014663669894163*AdcbResultRegs.ADCRESULT2 - 0.014663669894163*channel_offset.CH_6);
 
-       //Tens�o do dc-link
+       //Tensao do dc-link
        Filt_freq_Vdc.Un = 0.3235*AdcdResultRegs.ADCRESULT3 - gn;
-       TUPA_First_order_signals_filter(&Filt_freq_Vdc);          //filtra a tens�o Vdc com o filtro de segunda ordem
+       TUPA_First_order_signals_filter(&Filt_freq_Vdc);          //filtra a tensao Vdc com o filtro de segunda ordem
        entradas_red.Vdc = Filt_freq_Vdc.Yn;
        /////////////////////////////////Case Study////////////////////////////////////////////////////////////////
        if (flag.case_study == 1)
@@ -847,7 +849,7 @@ interrupt void adcb1_isr(void)
            }
        }
 
-       /////////////////////////////////Aquisi��o dos sinais//////////////////////////////////////////////////////
+       /////////////////////////////////Aquisicao dos sinais//////////////////////////////////////////////////////
 
        if(flag.data_logo_init == 1)
          {
@@ -869,7 +871,7 @@ interrupt void adcb1_isr(void)
        Vabc.a = entradas_red.Va;
        Vabc.b = entradas_red.Vb;
        Vabc.c = entradas_red.Vc;
-       TUPA_abc2alfabeta(&Vabc,&Valfabeta);            // transformada abc para alfa beta da tens�o da rede
+       TUPA_abc2alfabeta(&Vabc,&Valfabeta);            // transformada abc para alfa beta da tensao da rede
 
        //DSOGI
        SOG.Vm = Valfabeta.alfa;
@@ -877,12 +879,12 @@ interrupt void adcb1_isr(void)
        if (Counts.count2 < 36000)
        {
            Counts.count2 += 1;
-           Filt_freq_pll.Un = 60;                                             // Inicia a frequ�ncia de resson�ncia do SOG em 60Hz e, depois de um certo tempo, a freq da pll entra (adaptativo)
+           Filt_freq_pll.Un = 60;                                             // Inicia a frequencia de ressonancia do SOG em 60Hz e, depois de um certo tempo, a freq da pll entra (adaptativo)
        }
        else
        {
-            Filt_freq_pll.Un = pll_grid.freq;                                 // Freq de resson�ncia do SOG = Freq da PLL
-            //Filt_freq_pll.Un = 60;                                 // Freq de resson�ncia do SOG = Freq da PLL
+            Filt_freq_pll.Un = pll_grid.freq;                                 // Freq de ressonancia do SOG = Freq da PLL
+            //Filt_freq_pll.Un = 60;                                 // Freq de ressonancia do SOG = Freq da PLL
        }
 
        TUPA_First_order_signals_filter(&Filt_freq_pll);                    //filtra a frequencia da PLL
@@ -897,7 +899,7 @@ interrupt void adcb1_isr(void)
        pll_grid.beta = (SOG.V_sogi_q + SOGB.V_sogi)*0.5;
        TUPA_SRFPLL(&pll_grid);
 
-       // Elimina qualquer vest�gio da seq zero e realiza a transformada abc para alfa-beta da corrente medida do inversor
+       // Elimina qualquer vestigio da seq zero e realiza a transformada abc para alfa-beta da corrente medida do inversor
        entradas_red.Io = __divf32((entradas_red.Ia+entradas_red.Ib+entradas_red.Ic),3);
        Iabc.a = entradas_red.Ia - entradas_red.Io;
        Iabc.b = entradas_red.Ib - entradas_red.Io;
@@ -905,13 +907,13 @@ interrupt void adcb1_isr(void)
 
        TUPA_abc2alfabeta(&Iabc,&Ialfabeta);            // transformada abc para alfa-beta da corrente do inversor
 
-       //Medi��o pot ativa Injetada
+       //Medicao pot ativa Injetada
        Pm = 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.alfa + 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.beta;
-       //Medi��o pot reativa Injetada
+       //Medicao pot reativa Injetada
        Qm = 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.alfa - 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.beta;
 
-       ////////////////////////////////Controle da tens�o do dc-link (malha externa)///////////////////////////////
-       TUPA_Ramp(&VRamp);                                      //Rampa de refer�ncia de tens�o para o dc-link
+       ////////////////////////////////Controle da tensao do dc-link (malha externa)///////////////////////////////
+       TUPA_Ramp(&VRamp);                                      //Rampa de referencia de tensao para o dc-link
 
        //controle PI
        pi_Vdc.setpoint = VRamp.y*VRamp.y;
@@ -922,9 +924,9 @@ interrupt void adcb1_isr(void)
        fil2nP.x = Pm;
        fil2nQ.x = Qm;
        TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
-       TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisi��o por enquanto
+       TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisicao por enquanto
 
-       TUPA_Ramp(&QRamp);                      //Rampa de refer�ncia da pot�ncia reativa
+       TUPA_Ramp(&QRamp);                      //Rampa de referencia da potencia reativa
 
        // Controle
        pi_Q.setpoint = QRamp.y;
@@ -938,11 +940,11 @@ interrupt void adcb1_isr(void)
        //PR_Ia_fund.setpoint = Iref*pll_grid.costh;
        //PR_Ib_fund.setpoint = Iref*pll_grid.sinth;
 
-       // Sepoint do controle de corrente - Teoria da pot�ncia instant�nea
+       // Sepoint do controle de corrente - Teoria da potencia instantanea
        PR_Ia_fund.setpoint = __divf32((pll_grid.alfa*(-pi_Vdc.output) + pi_Q.output*pll_grid.beta),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
        PR_Ib_fund.setpoint = __divf32((pll_grid.beta*(-pi_Vdc.output) - pi_Q.output*pll_grid.alfa),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
 
-       // satura��o da corrente
+       // saturacao da corrente
        if(PR_Ia_fund.setpoint>Ir)  PR_Ia_fund.setpoint =  Ir;
        if(PR_Ia_fund.setpoint<-Ir) PR_Ia_fund.setpoint = -Ir;
        if(PR_Ib_fund.setpoint>Ir)  PR_Ib_fund.setpoint =  Ir;
@@ -979,7 +981,7 @@ interrupt void adcb1_isr(void)
        Valfabeta_pwm.alfa = PR_Ia_fund.output + PR_Ia_5.output + PR_Ia_7.output + pll_grid.alfa;
        Valfabeta_pwm.beta = PR_Ib_fund.output + PR_Ib_5.output + PR_Ib_7.output + pll_grid.beta;
 
-       ////Comente as duas linhas anteriores e descomente as duas linhas seguintes para teste de malha aberta (N�o pode est� conectado � rede)/////
+       ////Comente as duas linhas anteriores e descomente as duas linhas seguintes para teste de malha aberta (Nao pode esta conectado a rede)/////
        //Valfabeta_pwm.alfa = Vd_ref * pll_grid.costh;
        //Valfabeta_pwm.beta = Vd_ref * pll_grid.sinth;
 
@@ -1086,7 +1088,7 @@ void TUPA_abc2alfabeta(sABC *p_abc, sAlfaBeta *p_alfabeta)
     p_alfabeta->alfa = 0.66666667*(p_abc->a - 0.5*p_abc->b - 0.5*p_abc->c);
     p_alfabeta->beta = 0.5773502692*(p_abc->b - p_abc->c);
 
-    // Invariante em pot�ncia
+    // Invariante em potencia
    //p_alfabeta->alfa = 0.816496580927726*(p_abc->a - 0.5*p_abc->b - 0.5*p_abc->c);
    //p_alfabeta->beta = 0.816496580927726*(0.866025403784439*p_abc->b - 0.866025403784439*p_abc->c);
 }
@@ -1099,7 +1101,7 @@ void TUPA_alfabeta2abc(sAlfaBeta* p_alfabeta, sABC* p_ABC)
     p_ABC->b = -0.5*p_alfabeta->alfa + 0.866025403784439*p_alfabeta->beta;
     p_ABC->c = -0.5*p_alfabeta->alfa - 0.866025403784439*p_alfabeta->beta;
 
-    // Invariante em pot�ncia
+    // Invariante em potencia
     //p_ABC->a = 0.816496580927726*p_alfabeta->alfa;
     //p_ABC->b = 0.816496580927726*(-0.5*p_alfabeta->alfa + 0.866025403784439*p_alfabeta->beta);
     //p_ABC->c = 0.816496580927726*(-0.5*p_alfabeta->alfa - 0.866025403784439*p_alfabeta->beta);
@@ -1255,7 +1257,7 @@ void TUPA_pwm(sABC *p_ABC, sSvm *svp, float Vdc, Uint16 fpwm_cnt)
     Vbn = __divf32(p_ABC->b*1.732050807568877,Vdc);
     Vcn = __divf32(p_ABC->c*1.732050807568877,Vdc);
 
-    // Satura��o da Tens�o
+    // Saturacao da Tensao
     if(Van > 1) Van = 1;
     if(Van < -1) Van = -1;
     if(Vbn > 1) Vbn = 1;
@@ -1263,7 +1265,7 @@ void TUPA_pwm(sABC *p_ABC, sSvm *svp, float Vdc, Uint16 fpwm_cnt)
     if(Vcn > 1) Vcn = 1;
     if(Vcn < -1) Vcn = -1;
 
-    //C�lculo da seq zero para o SVPWM
+    //Calculo da seq zero para o SVPWM
     if(Van<Vbn && Van<Vcn && Vbn>Vcn)
     {
       vmin = Van;
@@ -1547,7 +1549,7 @@ int sumAscii(char *string, int len)
 // Protection function
 void TUPA_protect(void)
 {
-     // Prote��o de sobrecorrente no inversor
+     // Protecao de sobrecorrente no inversor
     if(fabs(entradas_red.Ia) > OVER_CURRENT_GRID_LIMIT || fabs(entradas_red.Ic) > OVER_CURRENT_GRID_LIMIT || fabs(entradas_red.Ib) > OVER_CURRENT_GRID_LIMIT)
     {
         Counts.count3++;
@@ -1565,7 +1567,7 @@ void TUPA_protect(void)
         Counts.count3 = 0;
     }
 
-    // Prote��o de sobretens�o no dc-link
+    // Protecao de sobretensao no dc-link
     if(entradas_red.Vdc > DC_OVERVOLTAGE_LIMIT)
     {
         Counts.count4++;
@@ -1582,7 +1584,7 @@ void TUPA_protect(void)
         Counts.count4 = 0;
     }
 
-    // Prote��o do Chopper
+    // Protecao do Chopper
     if(entradas_red.Vdc > MAX_CHOPPER_LIMIT)
     {
         flag.Chopper_On = 1;
@@ -1598,7 +1600,7 @@ void TUPA_protect(void)
     if(*Recv.recv0 == 1 && flag.AbleToStart == 1) flag.Shutdown = 1;
 
 
-    //Verifica se a flag Group_com est� indicando que a prote��o foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
+    //Verifica se a flag Group_com esta indicando que a protecao foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
     if(flag.Com_DSP2_read == 1 && flag.AbleToStart == 1) flag.Shutdown = 1;
 
 
@@ -1608,12 +1610,12 @@ void TUPA_protect(void)
 void TUPA_StartSequence(void)
 {
 
-    //Verifica se a flag Shutdown est� acionado
+    //Verifica se a flag Shutdown esta acionado
      if(flag.Shutdown == 0)
      {
          if(*Recv.recv0 == 0 && flag.Com_DSP2_read == 0) flag.AbleToStart = 1;
 
-         GpioDataRegs.GPACLEAR.bit.GPIO25 = 1;           // Limpa a flag que informa para a DSP02 que a prote��o nesse conjunto foi acionada
+         GpioDataRegs.GPACLEAR.bit.GPIO25 = 1;           // Limpa a flag que informa para a DSP02 que a protecao nesse conjunto foi acionada
 
           // Inicia o Start do sistema
           if(flag.Inv_on == 1)
@@ -1624,7 +1626,7 @@ void TUPA_StartSequence(void)
 
                   // Inicia a contagem do tempo da precarga
                   if(Counts.count6 <= PRECHARGE_LIMIT) Counts.count6++;
-                  //Verifica se o tempo m�ximo para a precarga foi atingido. Ser sim, aciona a prote��o e desliga tudo
+                  //Verifica se o tempo maximo para a precarga foi atingido. Ser sim, aciona a protecao e desliga tudo
                   if(Counts.count6 > PRECHARGE_LIMIT)
                   {
                       flag.precharge_fail = 1;
@@ -1632,16 +1634,16 @@ void TUPA_StartSequence(void)
                       fault = FAULT_PRECHARGE;
                   }
 
-                  //Verifica se a tens�o minima foi alcan�ada no dc-link
+                  //Verifica se a tensao minima foi alcancada no dc-link
                   if(entradas_red.Vdc >= DC_PRECHARGE_LIMIT)
                   {
                       if(Counts.count5 < 1000) Counts.count5++;
 
-                      // Verifica se a condi��o anterior � atendida ap�s 1000 medi��es
+                      // Verifica se a condicao anterior e atendida apos 1000 medicoes
                       if(Counts.count5>=1000)
                       {
-                          GpioDataRegs.GPBSET.bit.GPIO59 =  1;     // Fecha o Contator principal de conex�o do inversor com a rede
-                          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Abre o Contator da pr�-carga
+                          GpioDataRegs.GPBSET.bit.GPIO59 =  1;     // Fecha o Contator principal de conexao do inversor com a rede
+                          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Abre o Contator da pre-carga
                           flag.precharge_ok = 1;                   // Finaliza a precarga
                       }
 
@@ -1650,18 +1652,18 @@ void TUPA_StartSequence(void)
                   {
                       Counts.count5 = 0;
 
-                      // Abre o contator de pre carga e fecha o principal manualmente (importante quando a tens�o nos capacitores n�o atinge o minimo DC_PRECHARGE_LIMIT. OBS: Cuidado para n�o fechar este contator com uma tens�o baixa no dc-link)
+                      // Abre o contator de pre carga e fecha o principal manualmente (importante quando a tensao nos capacitores nao atinge o minimo DC_PRECHARGE_LIMIT. OBS: Cuidado para nao fechar este contator com uma tensao baixa no dc-link)
                       if(flag.manual_pre_charge == 1 && entradas_red.Vdc>DC_MANUAL_PRECHARGE_LIMIT)
                       {
-                          GpioDataRegs.GPBSET.bit.GPIO59 =  1;     // Fecha o Contator principal de conex�o do inversor com a rede
-                          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Abre o Contator da pr�-carga
+                          GpioDataRegs.GPBSET.bit.GPIO59 =  1;     // Fecha o Contator principal de conexao do inversor com a rede
+                          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;   // Abre o Contator da pre-carga
                           flag.precharge_ok = 1;                   // Finaliza a precarga
                       }
 
                   }
               }
            }
-          //Verifica a flag do chopper de prote��o. Se o estado for alto, ativa o Chopper
+          //Verifica a flag do chopper de protecao. Se o estado for alto, ativa o Chopper
           if(flag.Chopper_On == 1)
           {
               GpioDataRegs.GPBSET.bit.GPIO33 = 1;
@@ -1683,7 +1685,7 @@ void TUPA_StartSequence(void)
 // System stop function
 void TUPA_StopSequence(void)
 {
-    //Verifica se a flag Shutdown est� acionado ou se a Shutdown_Conv da CPU2 est� acionada (IPC6) e interrompe o chaveamento e abre os contatores
+    //Verifica se a flag Shutdown esta acionado ou se a Shutdown_Conv da CPU2 esta acionada (IPC6) e interrompe o chaveamento e abre os contatores
      if(flag.Shutdown == 1)
      {
          flag.AbleToStart = 0;
@@ -1694,13 +1696,13 @@ void TUPA_StopSequence(void)
          GpioDataRegs.GPBCLEAR.bit.GPIO59 =  1;
          GpioDataRegs.GPBCLEAR.bit.GPIO58 =  1;
 
-         GpioDataRegs.GPASET.bit.GPIO25 = 1;           // Informa para a DSP01 que a prote��o nesse conjunto foi acionada
+         GpioDataRegs.GPASET.bit.GPIO25 = 1;           // Informa para a DSP01 que a protecao nesse conjunto foi acionada
 
          flag.manual_pre_charge = 0;                  // Limpa a flag de Pre carga manual
 
      }
 
-     //Verifica a flag do chopper de prote��o. Se o estado for baixo, desativa o Chopper
+     //Verifica a flag do chopper de protecao. Se o estado for baixo, desativa o Chopper
      if(flag.Chopper_On == 0)
      {
          GpioDataRegs.GPBCLEAR.bit.GPIO33 = 1;
