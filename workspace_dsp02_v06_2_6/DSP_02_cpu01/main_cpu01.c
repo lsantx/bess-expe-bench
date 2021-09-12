@@ -262,7 +262,7 @@ typedef struct{
     float falling;
 } sRamp;
 #define PRamp_default {0,0,0,0,0,0,TSAMPLE,6e3,-6e3}
-#define VRamp_default {0,0,0,0,0,0,TSAMPLE,50,50}
+#define VRamp_default {0,0,0,0,0,0,TSAMPLE,50,-50}
 sRamp QRamp = PRamp_default;
 sRamp PRamp = PRamp_default;
 sRamp VRamp = VRamp_default;
@@ -386,7 +386,7 @@ float Ts = TSAMPLE;
 float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
 float  Iref = 0;
-float  Vdc_ref = 0;
+float  Vdc_ref = 500;
 float  Q_ref   = 0;
 float  Qm      = 0;
 float  Pm      = 0;
@@ -536,10 +536,10 @@ void main(void)
     // Enables CPU02 to load and wait for its loading loading through the finite loop
     ////Reminder. The CPIs that trigger interruption are 0,1,2 and 3. The others have no interruption and can be used as flags
     //
-//    while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
-//    IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
-//    while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
-//    IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag
+    while (GpioDataRegs.GPADAT.bit.GPIO26 == 0);      //loop to wait for CPU02 to be loaded from DSP01 (via encoder output GPIO26)
+    IpcRegs.IPCSET.bit.IPC5 = 1;                             //Set the IPC5 bit to start CPU02 loading
+    while (IpcRegs.IPCSTS.bit.IPC4 == 0);    //loop to wait for CPU02 to load from DSP02
+    IpcRegs.IPCACK.bit.IPC4 = 1;                             //Clears the IPC4 flag
 
     // Enables ePwm GPIOs
     InitEPwmGpio();
@@ -623,6 +623,12 @@ void main(void)
            EPwm5Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
            EDIS;                  // Disable EALLOW protected register access
 
+            //Limita a referencia de tensao
+            if(Vdc_ref>580) Vdc_ref = 580;
+            if(Vdc_ref<450) Vdc_ref = 450;
+
+            //rampa da referencia do controle do Vdc
+            VRamp.uin = Vdc_ref;
         }
         else
         {
@@ -653,6 +659,8 @@ void main(void)
            EPwm5Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
            EDIS;
 
+            //Reseta a rampa da referencia do controle de Vdc
+            VRamp.uin = entradas_red.Vdc;
         }
 
 
@@ -897,12 +905,6 @@ interrupt void adcb1_isr(void)
        Qm = 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.alfa - 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.beta;
 
        ////////////////////////////////Controle da tens�o do dc-link (malha externa)///////////////////////////////
-       //Limita a refer�ncia de tens�o
-       if(Vdc_ref>580) Vdc_ref = 580;
-
-       //rampa da refer�ncia do Vdc
-       VRamp.uin = Vdc_ref;
-
        TUPA_Ramp(&VRamp);                                      //Rampa de refer�ncia de tens�o para o dc-link
 
        //controle PI
@@ -918,6 +920,7 @@ interrupt void adcb1_isr(void)
 
        //Limita a refer�ncia de reativo
        if(Q_ref>5000) Q_ref = 5000;
+       if(Q_ref<-5000) Q_ref = -5000;
 
        //rampa de varia��o da refer�ncia de reativo
        QRamp.uin = Q_ref;
@@ -1307,14 +1310,19 @@ void TUPA_pwm(sABC *p_ABC, sSvm *svp, float Vdc, Uint16 fpwm_cnt)
 void TUPA_Ramp(sRamp *rmp)
 {
   if(rmp->uin != rmp->y) rmp->t1 = rmp->t1 + rmp->Ts;
-  else rmp->t1 = 0;
-  rmp->rate = (rmp->uin - rmp->y_ant)/(rmp->t1 - rmp->t1_ant);
+
+  if(rmp->t1 != rmp->t1_ant)
+  {
+    rmp->rate = (rmp->uin - rmp->y_ant)/(rmp->t1 - rmp->t1_ant);
+  }
+  else rmp->rate = 0;
+  
   if(rmp->rate > rmp->rising) rmp->y = (rmp->t1 - rmp->t1_ant)*rmp->rising + rmp->y_ant;
   else if(rmp->rate < rmp->falling) rmp->y = (rmp->t1 - rmp->t1_ant)*rmp->falling + rmp->y_ant;
   else rmp->y = rmp->uin;
 
   rmp->t1_ant = rmp->t1;
-  rmp->y_ant = rmp->y;
+  rmp->y_ant = rmp->y;	
 }
 
 // Tx funtion
