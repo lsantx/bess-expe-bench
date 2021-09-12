@@ -42,8 +42,13 @@
 
 // Ganhos do controlador PI do Reativo
 #define PI_Q_KI         12.5664
-#define PI_Q_OUTMAX     50000
-#define PI_Q_OUTMIN    -50000
+#define PI_Q_OUTMAX     9000
+#define PI_Q_OUTMIN    -9000
+
+// Ganhos do controlador PI do ativo
+#define PI_P_KI         12.5664
+#define PI_P_OUTMAX     9000
+#define PI_P_OUTMIN    -9000
 
 // Limite de tempo para pr�-carga
 #define PRECHARGE_LIMIT        30/(TSAMPLE)      //6 segundos

@@ -114,8 +114,10 @@ typedef struct {
 #define PI_PLL_GRID_DEFAULTS {0,0, 0, 0, 0, 0, 0, PI_PLL_GRID_KP, PI_PLL_GRID_KI,0,PI_PLL_GRID_OUTMIN , PI_PLL_GRID_OUTMAX, 0}
 #define PI_Vdc_DEFAULTS {0, 0, 0, 0, 0, 0, 0, PI_Vdc_KP, PI_Vdc_KI, 0,PI_Vdc_OUTMIN , PI_Vdc_OUTMAX, 0}
 #define PI_Q_DEFAULTS   {0, 0, 0, 0, 0, 0, 0, 0, PI_Q_KI, 0, PI_Q_OUTMIN , PI_Q_OUTMAX, 0}
+#define PI_P_DEFAULTS   {0, 0, 0, 0, 0, 0, 0, 0, PI_P_KI, 0, PI_P_OUTMIN , PI_P_OUTMAX, 0}
 sPI pi_Vdc = PI_Vdc_DEFAULTS;
 sPI pi_Q = PI_Q_DEFAULTS;
+sPI pi_P = PI_P_DEFAULTS;
 
 //PLL
 typedef struct {
@@ -390,6 +392,8 @@ float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 float  Iref = 0;
 float  Vdc_ref = 500;
 float  Q_ref   = 0;
+float  P_ref   = 0;
+float  P_control = 0;
 float  Qm      = 0;
 float  Pm      = 0;
 
@@ -602,6 +606,7 @@ void main(void)
            //Enable the dc-link and reactive voltage controller
            pi_Vdc.enab = 1;
            pi_Q.enab   = 1;
+           pi_P.enab = 1;
            // Enable Inverter current controllers
            PR_Ia_fund.enab = 1;
            PR_Ia_5.enab = 1;
@@ -625,23 +630,30 @@ void main(void)
            EPwm5Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
            EDIS;                  // Disable EALLOW protected register access
 
-            //Limita a referencia de tensao
-            if(Vdc_ref>580) Vdc_ref = 580;
-            if(Vdc_ref<450) Vdc_ref = 450;
-            //rampa da referencia do controle do Vdc
-            VRamp.uin = Vdc_ref;
 
             //Limita a referencia de reativo
             if(Q_ref>5000) Q_ref = 5000;
             if(Q_ref<-5000) Q_ref = -5000;
             //rampa de variacao da referencia de reativo
             QRamp.uin = Q_ref;
+
+            if(abs(fil2nP.y) <= 0.1 && P_ref == 0)
+            {
+              flag.vdc_control = 1;
+              flag.p_control = 0;
+            }
+            if(P_ref != 0)
+            {
+              flag.vdc_control = 0;
+              flag.p_control = 1;
+            }
         }
         else
         {
            //Disable dc-link and reactive voltage controller
            pi_Vdc.enab = 0;
            pi_Q.enab   = 0;
+           pi_P.enab   = 0;
            // Disable inverter current controllers
            PR_Ia_fund.enab = 0;
            PR_Ib_fund.enab = 0;
@@ -666,10 +678,12 @@ void main(void)
            EPwm5Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
            EDIS;
 
-            //Reseta a rampa da referencia do controle de Vdc
-            VRamp.uin = entradas_red.Vdc;
             //Reseta a rampa da referencia do controle de reativo
             QRamp.uin = fil2nQ.y;
+            QRamp.y = fil2nQ.y;
+            //Reseta as flags de controle
+            flag.vdc_control = 0;
+            flag.p_control = 0;
         }
 
 
@@ -912,21 +926,59 @@ interrupt void adcb1_isr(void)
        //Medicao pot reativa Injetada
        Qm = 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.alfa - 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.beta;
 
-       ////////////////////////////////Controle da tensao do dc-link (malha externa)///////////////////////////////
-       TUPA_Ramp(&VRamp);                                      //Rampa de referencia de tensao para o dc-link
-
-       //controle PI
-       pi_Vdc.setpoint = VRamp.y*VRamp.y;
-       pi_Vdc.feedback = entradas_red.Vdc*entradas_red.Vdc;
-       TUPA_Pifunc(&pi_Vdc);                                   // Controle PI
-
-       ////////////////////////////////Controle do Reativo (malha externa)///////////////////////////////
-       fil2nP.x = Pm;
-       fil2nQ.x = Qm;
        TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
        TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisicao por enquanto
 
-       TUPA_Ramp(&QRamp);                      //Rampa de referencia da potencia reativa
+       ////////////////////////////////Controle da tensao do dc-link (malha externa)///////////////////////////////
+       if(flag.vdc_control == 1)
+       {
+            //Limita a referencia de tensao
+            if(Vdc_ref>580) Vdc_ref = 580;
+            if(Vdc_ref<450) Vdc_ref = 450;
+
+            //rampa da referencia do controle do Vdc
+            VRamp.uin = Vdc_ref;
+
+            //controle PI
+            pi_Vdc.setpoint = VRamp.y*VRamp.y;
+            pi_Vdc.feedback = entradas_red.Vdc*entradas_red.Vdc;
+            TUPA_Pifunc(&pi_Vdc);                                   // Controle PI
+
+            P_control = -pi_Vdc.output;
+       }
+       else
+       {
+           VRamp.uin = entradas_red.Vdc;
+           VRamp.y = entradas_red.Vdc;
+       }
+
+       TUPA_Ramp(&VRamp);                                      //Rampa de referencia de tensao para o dc-link
+       ////////////////////////////////Controle do Ativo (malha externa)///////////////////////////////
+       if(flag.p_control == 1)
+       {
+           //Limita a referencia de potência
+           if(P_ref>6000)  P_ref = 6000;
+           if(P_ref<-1800) P_ref = -1800;
+
+           PRamp.uin = P_ref;
+
+           pi_P.setpoint = PRamp.y;
+           pi_P.feedback = fil2nP.y;
+
+           TUPA_Pifunc(&pi_P);
+
+           P_control = pi_P.output + pi_P.setpoint;
+       }
+       else
+       {
+           PRamp.uin = fil2nP.y;
+           PRamp.y = fil2nP.y;
+       }
+
+       TUPA_Ramp(&PRamp);
+       ////////////////////////////////Controle do Reativo (malha externa)///////////////////////////////
+       fil2nP.x = Pm;
+       fil2nQ.x = Qm;
 
        // Controle
        pi_Q.setpoint = QRamp.y;
@@ -935,14 +987,16 @@ interrupt void adcb1_isr(void)
 
        pi_Q.output = pi_Q.output + pi_Q.setpoint;
 
+       TUPA_Ramp(&QRamp);                      //Rampa de referencia da potencia reativa
+
        ////////////////////////////////Controle de Corrente (Malha interna)///////////////////////////////
        //Sepoint do controle de corrente (Sem malha externa)
        //PR_Ia_fund.setpoint = Iref*pll_grid.costh;
        //PR_Ib_fund.setpoint = Iref*pll_grid.sinth;
 
        // Sepoint do controle de corrente - Teoria da potencia instantanea
-       PR_Ia_fund.setpoint = __divf32((pll_grid.alfa*(-pi_Vdc.output) + pi_Q.output*pll_grid.beta),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
-       PR_Ib_fund.setpoint = __divf32((pll_grid.beta*(-pi_Vdc.output) - pi_Q.output*pll_grid.alfa),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
+       PR_Ia_fund.setpoint = __divf32((pll_grid.alfa*P_control + pi_Q.output*pll_grid.beta),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
+       PR_Ib_fund.setpoint = __divf32((pll_grid.beta*P_control - pi_Q.output*pll_grid.alfa),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
 
        // saturacao da corrente
        if(PR_Ia_fund.setpoint>Ir)  PR_Ia_fund.setpoint =  Ir;
