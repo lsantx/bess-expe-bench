@@ -626,9 +626,14 @@ void main(void)
             //Limita a referencia de tensao
             if(Vdc_ref>580) Vdc_ref = 580;
             if(Vdc_ref<450) Vdc_ref = 450;
-
             //rampa da referencia do controle do Vdc
             VRamp.uin = Vdc_ref;
+
+            //Limita a referencia de reativo
+            if(Q_ref>5000) Q_ref = 5000;
+            if(Q_ref<-5000) Q_ref = -5000;
+            //rampa de variacao da referencia de reativo
+            QRamp.uin = Q_ref;
         }
         else
         {
@@ -661,6 +666,8 @@ void main(void)
 
             //Reseta a rampa da referencia do controle de Vdc
             VRamp.uin = entradas_red.Vdc;
+            //Reseta a rampa da referencia do controle de reativo
+            QRamp.uin = fil2nQ.y;
         }
 
 
@@ -826,7 +833,6 @@ interrupt void adcb1_isr(void)
        Filt_freq_Vdc.Un = 0.3235*AdcdResultRegs.ADCRESULT3 - gn;
        TUPA_First_order_signals_filter(&Filt_freq_Vdc);          //filtra a tens�o Vdc com o filtro de segunda ordem
        entradas_red.Vdc = Filt_freq_Vdc.Yn;
-
        /////////////////////////////////Case Study////////////////////////////////////////////////////////////////
        if (flag.case_study == 1)
        {
@@ -917,13 +923,6 @@ interrupt void adcb1_isr(void)
        fil2nQ.x = Qm;
        TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
        TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisi��o por enquanto
-
-       //Limita a refer�ncia de reativo
-       if(Q_ref>5000) Q_ref = 5000;
-       if(Q_ref<-5000) Q_ref = -5000;
-
-       //rampa de varia��o da refer�ncia de reativo
-       QRamp.uin = Q_ref;
 
        TUPA_Ramp(&QRamp);                      //Rampa de refer�ncia da pot�ncia reativa
 
