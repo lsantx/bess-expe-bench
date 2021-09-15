@@ -637,7 +637,7 @@ void main(void)
             //rampa de variacao da referencia de reativo
             QRamp.uin = Q_ref;
 
-            if(abs(fil2nP.y) <= 0.1 && P_ref == 0)
+            if(PRamp.y == 0 && P_ref == 0)
             {
               flag.vdc_control = 1;
               flag.p_control = 0;
@@ -684,6 +684,9 @@ void main(void)
             //Reseta as flags de controle
             flag.vdc_control = 0;
             flag.p_control = 0;
+
+            VRamp.y = Filt_freq_Vdc.Yn;
+            VRamp.uin = Filt_freq_Vdc.Yn;
         }
 
 
@@ -930,6 +933,8 @@ interrupt void adcb1_isr(void)
        TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisicao por enquanto
 
        ////////////////////////////////Controle da tensao do dc-link (malha externa)///////////////////////////////
+       TUPA_Ramp(&VRamp);                                      //Rampa de referencia de tensao para o dc-link
+
        if(flag.vdc_control == 1)
        {
             //Limita a referencia de tensao
@@ -945,15 +950,12 @@ interrupt void adcb1_isr(void)
             TUPA_Pifunc(&pi_Vdc);                                   // Controle PI
 
             P_control = -pi_Vdc.output;
-       }
-       else
-       {
-           VRamp.uin = entradas_red.Vdc;
-           VRamp.y = entradas_red.Vdc;
-       }
 
-       TUPA_Ramp(&VRamp);                                      //Rampa de referencia de tensao para o dc-link
+            PRamp.uin = fil2nP.y;
+       }
        ////////////////////////////////Controle do Ativo (malha externa)///////////////////////////////
+       TUPA_Ramp(&PRamp);
+
        if(flag.p_control == 1)
        {
            //Limita a referencia de potência
@@ -968,14 +970,9 @@ interrupt void adcb1_isr(void)
            TUPA_Pifunc(&pi_P);
 
            P_control = pi_P.output + pi_P.setpoint;
-       }
-       else
-       {
-           PRamp.uin = fil2nP.y;
-           PRamp.y = fil2nP.y;
-       }
 
-       TUPA_Ramp(&PRamp);
+           VRamp.uin = Filt_freq_Vdc.Yn;
+       }
        ////////////////////////////////Controle do Reativo (malha externa)///////////////////////////////
        fil2nP.x = Pm;
        fil2nQ.x = Qm;

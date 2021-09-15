@@ -35,8 +35,8 @@
 #define PI_PLL_GRID_OUTMIN    -550
 
 // Ganhos do controlador PI do Vdc (0.5Hz)
-#define PI_Vdc_KP         0.019180928276777
-#define PI_Vdc_KI         0.034790355513840
+#define PI_Vdc_KP         0.009590464138388
+#define PI_Vdc_KI         0.017395177756920
 #define PI_Vdc_OUTMAX     50000
 #define PI_Vdc_OUTMIN    -50000
 
