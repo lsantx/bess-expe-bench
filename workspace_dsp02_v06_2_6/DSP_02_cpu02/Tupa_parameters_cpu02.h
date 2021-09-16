@@ -37,6 +37,18 @@
 #define PI_VCH_KP               0.7336
 #define PI_VCH_KI               0.0922
 
+// Ganhos do controlador PI de tensão de saída do conv cc/cc no modo Boost
+#define PI_BTVOUT_KP               0.0050265
+#define PI_BTVOUT_KI               0.8339
+#define PI_BTVOUT_OUTMAX           18
+#define PI_BTVOUT_OUTMIN          -18
+
+// Ganhos do controlador PI de tensão de saída do conv cc/cc no modo Buck
+#define PI_BUVOUT_KP               -0.0050265
+#define PI_BUVOUT_KI               -0.8339
+#define PI_BUVOUT_OUTMAX           18
+#define PI_BUVOUT_OUTMIN          -18
+
 // Referências máximas de corrente de descarga e carga
 #define Ir_dis                   16
 #define Ir_ch                    5

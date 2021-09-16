@@ -49,9 +49,11 @@ typedef struct {
     float feedforward;
 } sPI;
 
-#define PI_IDIS_DEFAULTS {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_DIS_KP, PI_DIS_KI, 0, 0, PI_DIS_OUTMIN , PI_DIS_OUTMAX, 0}
-#define PI_ICH_DEFAULTS  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_ICH_KP, PI_ICH_KI, 0, 0, PI_ICH_OUTMIN , PI_ICH_OUTMAX, 0}
-#define PI_VCH_DEFAULTS  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_VCH_KP, PI_VCH_KI, 0, 0, 0, 0, 0}
+#define PI_IDIS_DEFAULTS    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_DIS_KP, PI_DIS_KI, 0, 0, PI_DIS_OUTMIN , PI_DIS_OUTMAX, 0}
+#define PI_ICH_DEFAULTS     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_ICH_KP, PI_ICH_KI, 0, 0, PI_ICH_OUTMIN , PI_ICH_OUTMAX, 0}
+#define PI_VCH_DEFAULTS     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_VCH_KP, PI_VCH_KI, 0, 0, 0, 0, 0}
+#define PI_BTVOUT_DEFAULTS  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_BTVOUT_KP, PI_BTVOUT_KI, 0, 0, PI_BTVOUT_OUTMIN , PI_BTVOUT_OUTMAX, 0}
+#define PI_BUVOUT_DEFAULTS  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_BUVOUT_KP, PI_BUVOUT_KI, 0, 0, PI_BUVOUT_OUTMIN , PI_BUVOUT_OUTMAX, 0}
 sPI pi_I1_dis = PI_IDIS_DEFAULTS;
 sPI pi_I2_dis = PI_IDIS_DEFAULTS;
 sPI pi_I3_dis = PI_IDIS_DEFAULTS;
@@ -59,6 +61,8 @@ sPI pi_I1_ch  = PI_ICH_DEFAULTS;
 sPI pi_I2_ch  = PI_ICH_DEFAULTS;
 sPI pi_I3_ch  = PI_ICH_DEFAULTS;
 sPI piv_ch    = PI_VCH_DEFAULTS;
+sPI PIbt_vout = PI_BTVOUT_DEFAULTS;
+sPI PIbu_vout = PI_BUVOUT_DEFAULTS;
 
 //PWM
 typedef struct{
@@ -80,35 +84,33 @@ typedef struct{
     unsigned int AbleToStart;
     unsigned int Bat_Charge;
     unsigned int Bat_Discharge;
-    unsigned int Bat_Mode;
     unsigned int BVCM;
     unsigned int data_logo_init;
     unsigned int real_time_buff;
 }sFlags;
 
-#define FLAGS_DEFAULTS {0,0,0,0,0,0,0,1,0,0,1}
+#define FLAGS_DEFAULTS {0,0,0,0,0,0,0,0,0,1}
 sFlags flag = FLAGS_DEFAULTS;
 
 //Rampa
 typedef struct{
-int   enab;
-float final;
-float final_ant;
-float atual;
-float in;
-float delta;
-int   flag;
-int   flag2;
-float range;
-float inc;
-} Ramp;
-
-#define IRamp_default {0,0,0,0,0,0,0,0,0.01,0.008}
-#define VRamp_default {0,0,0,0,0,0,0,0,0.01,0.01}
-Ramp I1_Ramp = IRamp_default;
-Ramp I2_Ramp = IRamp_default;
-Ramp I3_Ramp = IRamp_default;
-Ramp VRamp   = VRamp_default;
+    float t1;
+    float t1_ant;
+    float y;
+    float y_ant;
+    float uin;
+    float rate;
+    float Ts;
+    float rising;
+    float falling;
+} sRamp;
+#define IRamp_default {0,0,0,0,0,0,TSAMPLE,(15),(-15)}
+#define VRamp_default {0,0,0,0,0,0,TSAMPLE,(250),(-250)}
+sRamp  I1_Ramp   = IRamp_default;
+sRamp  I2_Ramp   = IRamp_default;
+sRamp  I3_Ramp   = IRamp_default;
+sRamp  VRamp     = VRamp_default;
+sRamp  VoutRamp  = VRamp_default;
 
 typedef struct{
 float x;
@@ -139,11 +141,13 @@ typedef struct {
     } sFilter1st;
 #define FILTER_DEFAULTS_0_1_HZ {0,0,0,0,0.00006981317007977319,0.00006981317007977319}
 #define FILTER_DEFAULTS_2_HZ {0,0,0,0,0.00139626340159546372,0.00139626340159546372}
+#define FILTER_DEFAULTS_1_HZ {0,0,0,0,0.00069813170079773186,0.00069813170079773186}
 
 sFilter1st fil1nVbat = FILTER_DEFAULTS_0_1_HZ;
 sFilter1st fil1nVbat2 = FILTER_DEFAULTS_0_1_HZ;
 sFilter1st fil1nVbat3 = FILTER_DEFAULTS_0_1_HZ;
 sFilter1st Filt_current = FILTER_DEFAULTS_2_HZ;
+sFilter1st Filt_freq_Vdc = FILTER_DEFAULTS_1_HZ;
 
 typedef struct{
 float qn;
@@ -216,7 +220,7 @@ void TUPA_StartSequence(void);
 void TUPA_pwm(sPWM *, Uint16);
 void TUPA_StopSequence(void);
 void Offset_Calculation(void);
-void TUPA_Ramp(Ramp *);
+void TUPA_Ramp(sRamp *);
 void TUPA_Second_order_filter(sFilter2nd *);
 void TUPA_First_order_signals_filter(sFilter1st *);
 void soc_estimation(sSoc *);
@@ -249,6 +253,8 @@ float I_ch_ref    =  5;                         //Referencia da corrente de carg
 float Vboost      =  14.4;                      //Tensao de Boost
 float Vfloat      =  13.6;                      //Tensao de Float
 float Vref        =  0;                         //Referencia da tensao de carga
+float Pref        = 0;
+float Voutref    = 250;
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
@@ -395,19 +401,6 @@ inv_nro_muestras = 1.0/N_amostras;
 //Loop infinito
  while(1)
 {
-         //Alterna entre modo de carga e descarga do banco de baterias
-         if(flag.Bat_Mode == 1)        //Descarga
-         {
-             flag.Bat_Discharge = 1;
-             flag.Bat_Charge    = 0;
-
-         }
-         else if(flag.Bat_Mode == 2)   //Carga
-         {
-             flag.Bat_Discharge = 0;
-             flag.Bat_Charge    = 1;
-
-         }
         //
         // These functions are in the F2837xD_EPwm.c file
         //
@@ -423,11 +416,24 @@ inv_nro_muestras = 1.0/N_amostras;
            pi_I3_ch.enab = 1;
            piv_ch.enab   = 1;
 
-           //Habilita as rampas
-           I1_Ramp.enab = 1;           //rampa da corrente do braco 1
-           I2_Ramp.enab = 1;           //rampa da corrente do braco 2
-           I3_Ramp.enab = 1;           //rampa da corrente do braco 3
-           VRamp.enab   = 1;            //rampa da tensao para o modo Buck  (Carga)
+           //Reseta para Descarga (1) e Carga (2)
+           if(Pref > 0)
+           {
+             flag.Bat_Discharge = 1;               //Habilita Descarga
+             flag.Bat_Charge = 0;               //Desabilita Carga
+           }
+
+           else if(Pref < 0)
+           {
+             flag.Bat_Discharge = 0;               //Desabilita Descarga
+             flag.Bat_Charge = 1;               //Aciona o modo de carga
+           }
+
+           else if(Pref == 0)
+           {
+             flag.Bat_Discharge = 0;
+             flag.Bat_Charge = 0;
+           }
 
 
            if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
@@ -476,6 +482,21 @@ inv_nro_muestras = 1.0/N_amostras;
                EPwm10Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
                EDIS;
            }
+           else
+           {
+               // Ativa o Tipzone dos PWM e desabilita os pulsos
+               EALLOW;
+               EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
+               EPwm6Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+               EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+               EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
+               EPwm9Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+               EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+               EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+               EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+               EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+               EDIS;
+           }
         }
         else
         {
@@ -487,12 +508,6 @@ inv_nro_muestras = 1.0/N_amostras;
            pi_I2_ch.enab  = 0;
            pi_I3_ch.enab  = 0;
            piv_ch.enab    = 0;
-
-           //Desabilita as rampas
-           I1_Ramp.enab = 0;           //rampa da corrente do braco 1
-           I2_Ramp.enab = 0;           //rampa da corrente do braco 2
-           I3_Ramp.enab = 0;           //rampa da corrente do braco 3
-           VRamp.enab   = 0;            //rampa da tensao para o modo Buck  (Carga)
 
            // Ativa o Tipzone dos PWM e desabilita os pulsos
            EALLOW;
@@ -507,6 +522,9 @@ inv_nro_muestras = 1.0/N_amostras;
            EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
            EDIS;
 
+           VoutRamp.uin = Filt_freq_Vdc.Yn;
+           VoutRamp.y = Filt_freq_Vdc.Yn;
+
         }
 
 
@@ -517,19 +535,19 @@ inv_nro_muestras = 1.0/N_amostras;
            {
               case 0: //Default
               AdcResults[resultsIndex]  = entradas_dc.I1;
-              AdcResults2[resultsIndex] = I1_Ramp.atual;
+              AdcResults2[resultsIndex] = I1_Ramp.y;
               AdcResults3[resultsIndex] = 0;
               break;
 
               case 1:
               AdcResults[resultsIndex]  = entradas_dc.I2;
-              AdcResults2[resultsIndex] = I2_Ramp.atual;
+              AdcResults2[resultsIndex] = I2_Ramp.y;
               AdcResults3[resultsIndex] = 0;
               break;
 
               case 2:
               AdcResults[resultsIndex]  = entradas_dc.I3;
-              AdcResults2[resultsIndex] = I3_Ramp.atual;
+              AdcResults2[resultsIndex] = I3_Ramp.y;
               AdcResults3[resultsIndex] = 0;
               break;
 
@@ -633,9 +651,9 @@ interrupt void adca1_isr(void)
            entradas_dc.I1 = 0.007316831214635*AdcaResultRegs.ADCRESULT0 - 0.007316831214635*channel_offset.CH_1;
 
            //Tensao do Dc-link
-           fil2nVdc.x = 0.328687*AdccResultRegs.ADCRESULT0 - 764.5;
-           TUPA_Second_order_filter(&fil2nVdc);
-           entradas_dc.Vdc = fil2nVdc.y;
+           Filt_freq_Vdc.Un = 0.328687*AdccResultRegs.ADCRESULT0 - 764.5;
+           TUPA_First_order_signals_filter(&Filt_freq_Vdc);
+           entradas_dc.Vdc = Filt_freq_Vdc.Yn;
 
            //Medicao 1 da Tensao do banco de baterias
            entradas_dc.Vb1 = 0.400610162445055*AdccResultRegs.ADCRESULT1 - gn;
@@ -672,20 +690,17 @@ interrupt void adca1_isr(void)
 
            }
 
-         ///////////////////////////////Rampas////////////////////////////////////////////////
-         TUPA_Ramp(&I1_Ramp);                      //Rampa de Referencia da corrente para o modo de descarga
-         TUPA_Ramp(&VRamp);                          //Rampa da Referencia da tensao para o modo de descarga
+         ///////////////////////////////Rampa////////////////////////////////////////////////
+         TUPA_Ramp(&VRamp);
 
          //////////////////////////////Communication///////////////////////////////////////////
          if(*Recv.recv1>0.0001)
          {
-             flag.Bat_Mode = 1;
              I_dis_ref = __divf32(*Recv.recv1, entradas_dc.Vbt_filt);
              flag_zero = true;
          }
          if(*Recv.recv1<-0.0001)
          {
-             flag.Bat_Mode = 2;
              I_ch_ref = - __divf32(*Recv.recv1, entradas_dc.Vbt_filt);
              flag_zero = true;
 
@@ -710,51 +725,34 @@ interrupt void adca1_isr(void)
         //////////////////////////////////controle de Corrente modo Boost (Descarga)//////////////////////////////
         if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
         {
-            //rampa de variacao das correntes nos tres bracos
-            if(I_dis_ref>Ir_dis)  I_dis_ref = Ir_dis;                       //Trava I_dis_ref no valor maximo Ir_dis (Referencia maxima de corrente)
-            I1_Ramp.final = __divf32(I_dis_ref,Nb_int);
-            I1_Ramp.in    = __divf32(entradas_dc.I1+entradas_dc.I2+entradas_dc.I3,Nb_int);
-            I2_Ramp.final = I1_Ramp.final;
-            I2_Ramp.in    = I1_Ramp.in;
-            I3_Ramp.final = I1_Ramp.final;
-            I3_Ramp.in    = I1_Ramp.in;
+            VoutRamp.uin = Voutref;
 
+            PIbt_vout.setpoint = VoutRamp.y;
+            PIbt_vout.feedback = Filt_freq_Vdc.Yn;
+
+            TUPA_Pifunc(&PIbt_vout);                   // Controle
             //Controle de Corrente
-            pi_I1_dis.setpoint = I1_Ramp.atual;
+            pi_I1_dis.setpoint = PIbt_vout.output_sat / Nb_int;
             pi_I1_dis.feedback = entradas_dc.I1;
             TUPA_Pifunc(&pi_I1_dis);
 
             //PWM
             pwm_dc.din = pi_I1_dis.output;
         }
-        else
-        {
-            //Reseta as rampas de corrente: Importante para que no proximo ciclo a rampa atue
-            I1_Ramp.final = 0;
-            I2_Ramp.final = 0;
-            I3_Ramp.final = 0;
-        }
 
         //////////////////////////////////controle do modo Buck (Carga a Corrente e Tensao Constante)/////////////////////
         if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
         {
-            //Referencia e rampa da tensao
-            Vref = Vboost*Nbat_series;       //seta a Referencia de tensao para a tensao de boost
-            VRamp.final = Vref;
-            VRamp.in =  entradas_dc.Vbt_filt;
+            VoutRamp.uin = Voutref;
+            ///////////////////Malha externa de controle da tensão
+            ///controle
+            PIbu_vout.setpoint = VoutRamp.y;
+            PIbu_vout.feedback = Filt_freq_Vdc.Yn;
 
-           // Malha externa - controle da tensao
-
-            //Controlador PI
-            piv_ch.setpoint =  VRamp.atual;
-            piv_ch.feedback =  entradas_dc.Vbt_filt;
-            if(I_ch_ref>Ir_ch)  I_ch_ref = Ir_ch;                       //Trava I_dis_ref no valor maximo Ir_ch (Referencia maxima de corrente)
-            piv_ch.outMin   = -10;
-            piv_ch.outMax   = __divf32(I_ch_ref,Nb_int);
-            TUPA_Pifunc(&piv_ch);
+            TUPA_Pifunc(&PIbu_vout);
 
             //setpoint para a malha interna
-            pi_I1_ch.setpoint = piv_ch.output;
+            pi_I1_ch.setpoint = PIbu_vout.output  / Nb_int;
 //            pi_I1_ch.setpoint =__divf32(I_ch_ref,Nb_int);   During communication
 
             //Malha interna - controle de corrente
@@ -766,12 +764,6 @@ interrupt void adca1_isr(void)
             pwm_dc.din = pi_I1_ch.output;
 
         }
-        else
-        {
-            //Reseta a rampa de tensao: Importante para que no proximo ciclo a rampa atue
-            VRamp.final = 0;
-        }
-
         //PWM
         TUPA_pwm(&pwm_dc,EPwm6Regs.TBPRD);
 
@@ -803,16 +795,12 @@ interrupt void adca2_isr(void)
        //Corrente do braco 2 do Conv cc/cc
         entradas_dc.I2 = 0.007310862860686*AdcaResultRegs.ADCRESULT1 - 0.007310862860686*channel_offset.CH_2;
 
-        ///////////////////////////////Rampas////////////////////////////////////////////////
-        TUPA_Ramp(&I2_Ramp);                      //Rampa de Referencia da corrente para o modo de descarga
-
-
         //////////////////////////////////controle de Corrente modo Boost (Descarga)/////////////////////
         if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
         {
 
             //Controle de Corrente
-            pi_I2_dis.setpoint = I2_Ramp.atual;
+            pi_I2_dis.setpoint = pi_I1_dis.setpoint;
             pi_I2_dis.feedback = entradas_dc.I2;
             TUPA_Pifunc(&pi_I2_dis);
 
@@ -825,7 +813,7 @@ interrupt void adca2_isr(void)
         {
 
             // Referencia de corrente para equalizacao
-            pi_I2_ch.setpoint = pi_I1_ch.setpoint;    //setpoint para a malha interna para balancear as correntes
+            pi_I2_ch.setpoint = pi_I1_ch.setpoint;
 
             //Controle de Corrente
             pi_I2_ch.feedback = -entradas_dc.I2;
@@ -871,7 +859,7 @@ interrupt void adca3_isr(void)
          if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
          {
              //Controle de Corrente
-             pi_I3_dis.setpoint = I3_Ramp.atual;
+             pi_I3_dis.setpoint = pi_I1_dis.setpoint;
              pi_I3_dis.feedback = entradas_dc.I3;
              TUPA_Pifunc(&pi_I3_dis);
 
@@ -883,7 +871,7 @@ interrupt void adca3_isr(void)
          if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
          {
              // Referencia de corrente para equalizacao
-             pi_I3_ch.setpoint = pi_I1_ch.setpoint;    //setpoint para a malha interna para balancear as correntes
+             pi_I3_ch.setpoint = pi_I1_ch.setpoint;
 
              //Controle de Corrente
              pi_I3_ch.feedback = -entradas_dc.I3;
@@ -905,50 +893,23 @@ interrupt void adca3_isr(void)
 }
 
 //////////////////////////////////////////////////Funcoes de Controle//////////////////////////////////////
-// Funcao Rampa
-void TUPA_Ramp(Ramp *rmp)
+// Rampa
+void TUPA_Ramp(sRamp *rmp)
 {
-    if(rmp->enab)
-    {
-        if(rmp->final != rmp->final_ant)
-        {
-            rmp->flag = 0;
-            rmp->flag2 = 1;
-        }
+  if(rmp->uin != rmp->y) rmp->t1 = rmp->t1 + rmp->Ts;
 
-        rmp->final_ant = rmp->final;
+  if(rmp->t1 != rmp->t1_ant)
+  {
+    rmp->rate = (rmp->uin - rmp->y_ant)/(rmp->t1 - rmp->t1_ant);
+  }
+  else rmp->rate = 0;
 
-        if(rmp->flag == 0)
-        {
-            rmp->atual = rmp->in;
-            rmp->flag = 1;
-        }
+  if(rmp->rate > rmp->rising) rmp->y = (rmp->t1 - rmp->t1_ant)*rmp->rising + rmp->y_ant;
+  else if(rmp->rate < rmp->falling) rmp->y = (rmp->t1 - rmp->t1_ant)*rmp->falling + rmp->y_ant;
+  else rmp->y = rmp->uin;
 
-        rmp->delta = rmp->final - rmp->atual;
-
-        if(rmp->flag2 == 1)
-        {
-            if(rmp->delta > 0)
-            {
-                rmp->atual += rmp->inc;
-                if(rmp->delta<=rmp->range)
-                {
-                    rmp->atual = rmp->final;
-                    rmp->flag2 = 0;
-                }
-            }
-            else if(rmp->delta < 0)
-            {
-                rmp->atual -= rmp->inc;
-                if(rmp->delta>=rmp->range)
-                {
-                    rmp->atual = rmp->final;
-                    rmp->flag2 = 0;
-                }
-
-            }
-        }
-    }
+  rmp->t1_ant = rmp->t1;
+  rmp->y_ant = rmp->y;
 }
 
 //Filtro segunda ordem
