@@ -415,6 +415,8 @@ inv_nro_muestras = 1.0/N_amostras;
            pi_I2_ch.enab = 1;
            pi_I3_ch.enab = 1;
            piv_ch.enab   = 1;
+           PIbt_vout.enab = 1;
+           PIbu_vout.enab = 1;
 
            //Reseta para Descarga (1) e Carga (2)
            if(Pref > 0)
@@ -508,6 +510,8 @@ inv_nro_muestras = 1.0/N_amostras;
            pi_I2_ch.enab  = 0;
            pi_I3_ch.enab  = 0;
            piv_ch.enab    = 0;
+           PIbt_vout.enab = 0;
+           PIbu_vout.enab = 0;
 
            // Ativa o Tipzone dos PWM e desabilita os pulsos
            EALLOW;
@@ -851,9 +855,6 @@ interrupt void adca3_isr(void)
     {
         //Corrente do braco 2 do Conv cc/cc
          entradas_dc.I3 = 0.007432592601990*AdcaResultRegs.ADCRESULT2 - 0.007432592601990*channel_offset.CH_3;
-
-         ///////////////////////////////Rampas////////////////////////////////////////////////
-         TUPA_Ramp(&I3_Ramp);                      //Rampa de Referencia da corrente
 
          //////////////////////////////////controle de Corrente modo Boost (Descarga)/////////////////////
          if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
