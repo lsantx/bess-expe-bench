@@ -27,6 +27,7 @@ __interrupt void adca2_isr(void);
 __interrupt void adca3_isr(void);
 __interrupt void IPC2_INT(void);
 __interrupt void IPC3_INT(void);
+__interrupt void IPC0_INT(void);
 
 
 

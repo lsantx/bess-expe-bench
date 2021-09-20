@@ -296,9 +296,10 @@ typedef struct{
     Uint32 count9;
     Uint16 count10;
     Uint16 count11;
+    Uint16 count_ipc;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //Variables to receive data from CPU1 to CPU2
@@ -485,14 +486,12 @@ void main(void)
     EALLOW;
     PieVectTable.ADCB1_INT = &adcb1_isr;  //function for ADCB interrupt 1
     PieVectTable.IPC1_INT = &IPC1_INT; //function of the interruption of the IPC for communication of CPus
-    PieVectTable.IPC0_INT = &IPC0_INT;
     PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption
     EDIS;
 
     PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
     PieCtrlRegs.PIEIER1.bit.INTx14 = 1;      //IPC1 interruption of intercommunication between CPUs. Enables the corresponding column 14
     PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1 SCIA_RX
-    PieCtrlRegs.PIEIER1.bit.INTx13 = 1;  //IPC0 interruption
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
@@ -749,13 +748,6 @@ interrupt void IPC1_INT(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
-interrupt void IPC0_INT(void)
-{
-    Recv.recv1 = IpcRegs.IPCRECVADDR;
-    IpcRegs.IPCACK.bit.IPC0 = 1;
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
-}
-
 interrupt void adcb1_isr(void)
 {
     GpioDataRegs.GPBSET.bit.GPIO62 = 1;                            // GPIO para verificar a freq de amostragem
@@ -770,16 +762,34 @@ interrupt void adcb1_isr(void)
     TUPA_StartSequence();
 
     //Envia a variaveis para o nucleo 2
-    IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown;
-    IpcRegs.IPCSET.bit.IPC2 = 1;
+    if(Counts.count_ipc == 0)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown;
+        IpcRegs.IPCSET.bit.IPC2 = 1;
+    }
+
+    if(Counts.count_ipc == 1)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &flag.BSC_PulsesOn;
+        IpcRegs.IPCSET.bit.IPC3 = 1;
+    }
+
+    if(Counts.count_ipc == 2)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &pi_P.setpoint;
+        IpcRegs.IPCSET.bit.IPC0 = 1;
+    }
+
+    Counts.count_ipc += 1;
+
+    if(Counts.count_ipc == 3) Counts.count_ipc = 0;
 
     if(flag_ena == 1)
     {
-        IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
-        IpcRegs.IPCSET.bit.IPC3 = 1;
+//        IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
+//        IpcRegs.IPCSET.bit.IPC3 = 1;
 
         Q_ref = sci_msgA.qref;
-        soc = *Recv.recv1;
         pout = Pm;
         qout = Qm;
 

@@ -205,10 +205,11 @@ counts Counts = COUNTS_DEFAULTS;
 //Variaveis para receber dados do CPU1 para o CPU2
 typedef struct{
     unsigned int *recv0;
-    float *recv1;
+    unsigned int *recv1;
+    float *recv2;
 }SrecvCPU1toCPU2;
 
-#define RECV_DEFAULTS {0,0}
+#define RECV_DEFAULTS {0,0,0}
 SrecvCPU1toCPU2 Recv = RECV_DEFAULTS;
 
 ///////////////////////////////////////////// Funcoes ////////////////////////////////////////
@@ -319,11 +320,13 @@ void main(void)
     PieVectTable.ADCA3_INT = &adca3_isr;     //function for ADCA interrupt 2
     PieVectTable.IPC2_INT = &IPC2_INT;       //Funcao da interrupcao do IPC para comunicacao das CPus
     PieVectTable.IPC3_INT = &IPC3_INT;       //Funcao da interrupcao do IPC para comunicacao das CPus
+    PieVectTable.IPC0_INT = &IPC0_INT;
     PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //interrupcao ADC_A. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
     PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //interrupcao ADC_A2. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
     PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //interrupcao ADC_A3. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
     PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrupcao IPC2 de inter comunicacao entre os CPUS. Habilita a coluna 15 correspondente
     PieCtrlRegs.PIEIER1.bit.INTx16 = 1;      //interrupcao IPC3 de inter comunicacao entre os CPUS. Habilita a coluna 15 correspondente
+    PieCtrlRegs.PIEIER1.bit.INTx13 = 1;      //IPC0 interruption
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
@@ -401,6 +404,7 @@ inv_nro_muestras = 1.0/N_amostras;
 //Loop infinito
  while(1)
 {
+        flag.BSC_PulsesOn = *Recv.recv1;
         //
         // These functions are in the F2837xD_EPwm.c file
         //
@@ -419,6 +423,8 @@ inv_nro_muestras = 1.0/N_amostras;
            PIbu_vout.enab = 1;
 
            //Reseta para Descarga (1) e Carga (2)
+           Pref = *Recv.recv2;
+
            if(Pref > 0)
            {
              flag.Bat_Discharge = 1;               //Habilita Descarga
@@ -596,6 +602,13 @@ interrupt void IPC3_INT(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
+interrupt void IPC0_INT(void)
+{
+    Recv.recv2 = IpcRegs.IPCRECVADDR;
+    IpcRegs.IPCACK.bit.IPC3 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
 
 /////////////////////////////////////////////////Interrupcoes: Controle///////////////////////////////////
 // adca1_isr - Read ADC Buffer in ISR
@@ -618,9 +631,6 @@ interrupt void adca1_isr(void)
     //Envia a Variaveis para o npucleo 2
     IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown_Conv;
     IpcRegs.IPCSET.bit.IPC1 = 1;
-
-    IpcRegs.IPCSENDADDR = (Uint32) &soc_est.soc_out;
-    IpcRegs.IPCSET.bit.IPC0 = 1;
 
     //Piscar o LED 3 em uma determinada frequecia
     Counts.count7 ++;
