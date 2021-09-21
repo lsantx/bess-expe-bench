@@ -187,10 +187,12 @@ SsendCPU2toCPU1 Send = SEND_DEFAULTS;
 //Váriaveis para receber dados do CPU1 para o CPU2
 typedef struct{
     unsigned int *recv0;
-    float *recv1;
+    unsigned int *recv1;
+    float *recv2;
+
 }SrecvCPU1toCPU2;
 
-#define RECV_DEFAULTS {0,0}
+#define RECV_DEFAULTS {0,0,0}
 SrecvCPU1toCPU2 Recv = RECV_DEFAULTS;
 
 ///////////////////////////////////////////// Funções ////////////////////////////////////////
@@ -296,12 +298,17 @@ void main(void)
 
     PieVectTable.ADCA1_INT = &adca1_isr;     //function for ADCA interrupt 1
     PieVectTable.ADCA2_INT = &adca2_isr;     //function for ADCA interrupt 2
-    PieVectTable.ADCA3_INT = &adca3_isr;     //function for ADCA interrupt 2
+    PieVectTable.ADCA3_INT = &adca3_isr;     //function for ADCA interrupt 3
+    PieVectTable.IPC3_INT = &IPC3_INT;       //Funcao da interrupcao do IPC para comunicacao das CPus
+    PieVectTable.IPC0_INT = &IPC0_INT;
+
     PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //Interrupção ADC_A. Habilita a coluna 1 das interrupções, pg 79 do material do workshop
     PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //Interrupção ADC_A2. Habilita a coluna 1 das interrupções, pg 79 do material do workshop
     PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //Interrupção ADC_A3. Habilita a coluna 1 das interrupções, pg 79 do material do workshop
     PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrupção IPC2 de inter comunicação entre os CPUS. Habilita a coluna 15 correspondente
-//
+    PieCtrlRegs.PIEIER1.bit.INTx13 = 1;      //IPC0 interruption
+    PieCtrlRegs.PIEIER1.bit.INTx16 = 1;      //interrupcao IPC3 de inter comunicacao entre os CPUS
+
 // Enable global Interrupts and higher priority real-time debug events:
 //
     IER |= (M_INT10+M_INT1); //Habilita a linha da tabela de interrupção. correspondente ao ADC_B, pg 79 do material do workshop
@@ -379,6 +386,7 @@ inv_nro_muestras = 1.0/N_amostras;
 //Loop infinito
  while(1)
 {
+         flag.BSC_PulsesOn = *Recv.recv1;
        //Carrega a flag relacionada com a entrada digital responsável por verificar se a flag Shutdown do conjunto 1 foi acionada
          flag.Com_DSP1_read = GpioDataRegs.GPADAT.bit.GPIO25;    //Estado do contator de conexão com a rede
         //
@@ -397,6 +405,8 @@ inv_nro_muestras = 1.0/N_amostras;
            piv_ch.enab   = 1;
            PIbt_vout.enab = 1;
            PIbu_vout.enab = 1;
+
+           Pref = *Recv.recv2;
 
            if(Pref > 0)
            {
@@ -561,6 +571,20 @@ inv_nro_muestras = 1.0/N_amostras;
 }
 
 /////////////////////////////////////////////////Interrupções: Controle///////////////////////////////////
+interrupt void IPC3_INT(void)
+{
+    Recv.recv1 = IpcRegs.IPCRECVADDR;
+    IpcRegs.IPCACK.bit.IPC3 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+interrupt void IPC0_INT(void)
+{
+    Recv.recv2 = IpcRegs.IPCRECVADDR;
+    IpcRegs.IPCACK.bit.IPC3 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
 // adca1_isr - Read ADC Buffer in ISR
 interrupt void adca1_isr(void)
 {

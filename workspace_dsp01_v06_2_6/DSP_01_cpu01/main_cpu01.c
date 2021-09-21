@@ -290,9 +290,10 @@ typedef struct{
     Uint32 count6;
     Uint32 count7;
     Uint32 count8;
+    Uint16 count_ipc;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //V�riaveis para enviar dados do CPU1 para o CPU2
@@ -360,6 +361,9 @@ void TxBufferAqu(Ssci_mesg *);
 float RxBufferAqu(Ssci *, Ssci_mesg *);
 int sumAscii(char *string, int len);
 ////////////////////////////////////////////// Global Variables ////////////////////////////////////
+
+int test_ipc_com = 1;
+float test_ipc_com2 = 2000.98;
 
 //Variavel para ajuste do offset
 float inv_nro_muestras = 0;
@@ -471,9 +475,10 @@ void main(void)
     PieVectTable.SCIA_RX_INT = &sciaRxFifoIsr;  // SCI Tx interruption
     PieVectTable.TIMER0_INT = &isr_cpu_timer0;  // SCI Tx interruption
     EDIS;
-    PieCtrlRegs.PIEIER1.bit.INTx2 = 1;       //ADC_B interrupt. Enables column 2 of the interruptions, page 79 of the workshop material
+    PieCtrlRegs.PIEIER1.bit.INTx14 = 1;      //IPC1 interruption of intercommunication between CPUs. Enables the corresponding column 14
     PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1 SCIA_RX
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;   // Timer0
+
 // Enable global Interrupts and higher priority real-time debug events:
 //
     IER = M_INT1 | M_INT9; //Habilita a linha da tabela de interrup��o. correspondente ao ADC_B, pg 79 do material do workshop
@@ -583,6 +588,22 @@ interrupt void IPC1_INT(void)
 // sciaTxFifo - SCIA Transmit FIFO - ex: IA+9999F
 interrupt void isr_cpu_timer0(void)
 {
+    if(Counts.count_ipc == 0)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &test_ipc_com;
+        IpcRegs.IPCSET.bit.IPC3 = 1;
+    }
+
+    if(Counts.count_ipc == 1)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
+        IpcRegs.IPCSET.bit.IPC0 = 1;
+    }
+
+    Counts.count_ipc += 1;
+
+    if(Counts.count_ipc == 2) Counts.count_ipc = 0;
+
     Uint16 i;
 
     if (flag_ena == 1)
