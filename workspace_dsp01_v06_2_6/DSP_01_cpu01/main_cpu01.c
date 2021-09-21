@@ -590,7 +590,7 @@ interrupt void isr_cpu_timer0(void)
 {
     if(Counts.count_ipc == 0)
     {
-        IpcRegs.IPCSENDADDR = (Uint32) &test_ipc_com;
+        IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.qref;
         IpcRegs.IPCSET.bit.IPC3 = 1;
     }
 

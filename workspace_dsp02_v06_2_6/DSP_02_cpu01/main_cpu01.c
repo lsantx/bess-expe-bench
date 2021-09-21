@@ -790,8 +790,8 @@ interrupt void adcb1_isr(void)
 //        IpcRegs.IPCSET.bit.IPC3 = 1;
 
         Q_ref = sci_msgA.qref;
-        pout = Pm;
-        qout = Qm;
+        pout = pi_P.setpoint;
+        qout = flag.BSC_PulsesOn;
 
         flag_tx += 1;
 
@@ -1751,6 +1751,7 @@ void TUPA_StopSequence(void)
      {
          flag.AbleToStart = 0;
          flag.GSC_PulsesOn = 0;                        // Interrompe o chaveamento
+         flag.BSC_PulsesOn = 0;
          flag.Inv_on = 0;                              // Reseta o valor de flag.Inv_on
          Counts.count8 = 0;                            //Contador para a leitura do estado dos contatores
          // Abre todos os contatore
