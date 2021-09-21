@@ -339,7 +339,7 @@ Ssci scia_check3 = SCI_DEFAULTS;
 
 typedef struct{
     float pref;
-    float qref;
+    int qref;
     float socref;
     float check1;
     float check2;
@@ -484,7 +484,7 @@ void main(void)
     IER = M_INT1 | M_INT9; //Habilita a linha da tabela de interrup��o. correspondente ao ADC_B, pg 79 do material do workshop
 
     InitCpuTimers();
-    ConfigCpuTimer(&CpuTimer0, 200, 50000);
+    ConfigCpuTimer(&CpuTimer0, 200, 111.11);
     CpuTimer0Regs.TCR.all = 0x4001;
 
 // Configure GPIOs
@@ -588,6 +588,8 @@ interrupt void IPC1_INT(void)
 // sciaTxFifo - SCIA Transmit FIFO - ex: IA+9999F
 interrupt void isr_cpu_timer0(void)
 {
+    flag_ena = 1;
+
     if(Counts.count_ipc == 0)
     {
         IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.qref;

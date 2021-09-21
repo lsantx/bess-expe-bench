@@ -841,6 +841,7 @@ interrupt void adcb1_isr(void)
     }
     else
     {
+       flag_ena = 1;
        ////////////////////////////////////////// Leitura dos sensores////////////////////////////////////////////////////////////////q
        // Tensoes de Linha
        entradas_red.Vca = 0.251556520094124*AdcdResultRegs.ADCRESULT0 - 0.251556520094124*channel_offset.CH_1;
