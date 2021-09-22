@@ -293,9 +293,10 @@ typedef struct{
     Uint32 count9;
     Uint16 count10;
     Uint16 count11;
+    Uint16 count_ipc;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //Variables to receive data from CPU1 to CPU2
@@ -742,14 +743,24 @@ interrupt void adcb1_isr(void)
     TUPA_StartSequence();
 
     //Envia a v�riaveis para o npucleo 2
-    IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown;
-    IpcRegs.IPCSET.bit.IPC2 = 1;
+    if(Counts.count_ipc == 0)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown;
+        IpcRegs.IPCSET.bit.IPC2 = 1;
+    }
 
-    if(flag_ena == 1)
+    if(Counts.count_ipc == 1)
     {
         IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
         IpcRegs.IPCSET.bit.IPC3 = 1;
+    }
 
+    Counts.count_ipc += 1;
+
+    if(Counts.count_ipc == 2) Counts.count_ipc = 0;
+
+    if(flag_ena == 1)
+    {
         Q_ref = sci_msgA.qref;
         soc = *Recv.recv1;
         pout = Pm;

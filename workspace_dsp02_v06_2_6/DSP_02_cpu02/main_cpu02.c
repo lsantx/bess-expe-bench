@@ -193,9 +193,10 @@ typedef struct{
     Uint32 count9;
     Uint32 count10;
     Uint32 count11;
+    Uint16 count_ipc;
 }counts;
 
-#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
+#define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
 //V�riaveis para receber dados do CPU1 para o CPU2
@@ -594,11 +595,21 @@ interrupt void adca1_isr(void)
     Stand_by_mode();
 
     //Envia a v�riaveis para o npucleo 2
-    IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown_Conv;
-    IpcRegs.IPCSET.bit.IPC1 = 1;
+    if(Counts.count_ipc == 0)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown_Conv;
+        IpcRegs.IPCSET.bit.IPC1 = 1;
+    }
 
-    IpcRegs.IPCSENDADDR = (Uint32) &soc_est.soc_out;
-    IpcRegs.IPCSET.bit.IPC0 = 1;
+    if(Counts.count_ipc == 1)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &soc_est.soc_out;
+        IpcRegs.IPCSET.bit.IPC0 = 1;
+    }
+
+    Counts.count_ipc += 1;
+
+    if(Counts.count_ipc == 2) Counts.count_ipc = 0;
 
     //Piscar o LED 3 em uma determinada frequecia
     Counts.count7 ++;
