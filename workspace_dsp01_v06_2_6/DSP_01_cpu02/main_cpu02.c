@@ -687,7 +687,7 @@ interrupt void adca1_isr(void)
              TUPA_Pifunc(&PIbt_vout);                   // Controle
 
              //Controle de Corrente
-             pi_I1_dis.setpoint = PIbt_vout.output_sat / Nb_int;
+             pi_I1_dis.setpoint = PIbt_vout.output / Nb_int;
              pi_I1_dis.feedback = entradas_dc.I1;
              TUPA_Pifunc(&pi_I1_dis);
 
@@ -941,7 +941,7 @@ void TUPA_protect(void)
        {
            Counts.count3++;
 
-           if(Counts.count3 > 12)
+           if(Counts.count3 > 2)
            {
                flag.Shutdown_Conv = 1;
                fault = FAULT_OVERCURRENT;
@@ -962,7 +962,7 @@ void TUPA_protect(void)
       {
           Counts.count11++;
 
-          if(Counts.count11 > 12)
+          if(Counts.count11 > 4)
           {
               flag.Shutdown_Conv = 1;
               fault = FAULT_OVERCURRENT;
@@ -981,7 +981,7 @@ void TUPA_protect(void)
    {
        Counts.count8++;
 
-       if(Counts.count8 > 6)
+       if(Counts.count8 > 3)
        {
          flag.Shutdown_Conv = 1;
          fault = FAULT_VBAT_OVERVOLTAGE;

@@ -38,14 +38,14 @@
 #define PI_VCH_KI               0.0922
 
 // Ganhos do controlador PI de tensão de saída do conv cc/cc no modo Boost
-#define PI_BTVOUT_KP               0.0050265
-#define PI_BTVOUT_KI               0.8339
+#define PI_BTVOUT_KP               0.8079
+#define PI_BTVOUT_KI               0.8435
 #define PI_BTVOUT_OUTMAX           18
 #define PI_BTVOUT_OUTMIN          -18
 
 // Ganhos do controlador PI de tensão de saída do conv cc/cc no modo Buck
-#define PI_BUVOUT_KP               -0.0050265
-#define PI_BUVOUT_KI               -0.8339
+#define PI_BUVOUT_KP               -0.8079
+#define PI_BUVOUT_KI               -0.8435
 #define PI_BUVOUT_OUTMAX           18
 #define PI_BUVOUT_OUTMIN          -18
 
@@ -55,7 +55,7 @@
 
 // Limites para proteções
 #define OVER_CURRENT_DC_LIMIT_DISCHARGE      25
-#define OVER_CURRENT_DC_LIMIT_CHARGE         9
+#define OVER_CURRENT_DC_LIMIT_CHARGE         15
 #define DC_OVERVOLTAGE_LIMIT                 650
 #define BAT_OVERVOLTAGE_LIMIT                15.5*Nbat_series
 #define BAT_UNDERVOLTAGE_LIMIT               9*Nbat_series
