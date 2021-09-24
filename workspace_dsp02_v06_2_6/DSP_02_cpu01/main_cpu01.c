@@ -265,7 +265,7 @@ typedef struct{
     float rising;
     float falling;
 } sRamp;
-#define PRamp_default {0,0,0,0,0,0,TSAMPLE,2e3,-2e3}
+#define PRamp_default {0,0,0,0,0,0,TSAMPLE,200,-200}
 #define VRamp_default {0,0,0,0,0,0,TSAMPLE,50,-50}
 sRamp QRamp = PRamp_default;
 sRamp PRamp = PRamp_default;
