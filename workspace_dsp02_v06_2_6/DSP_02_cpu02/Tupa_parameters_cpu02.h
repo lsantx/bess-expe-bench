@@ -56,7 +56,7 @@
 // Limites para proteções
 #define OVER_CURRENT_DC_LIMIT_DISCHARGE      25
 #define OVER_CURRENT_DC_LIMIT_CHARGE         15
-#define DC_OVERVOLTAGE_LIMIT                 650
+#define DC_OVERVOLTAGE_LIMIT                 325
 #define BAT_OVERVOLTAGE_LIMIT                15.5*Nbat_series
 #define BAT_UNDERVOLTAGE_LIMIT               9*Nbat_series
 

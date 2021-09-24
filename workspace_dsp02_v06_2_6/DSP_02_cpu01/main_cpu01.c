@@ -1630,7 +1630,7 @@ void TUPA_protect(void)
     }
 
     // Protecao de sobretensao no dc-link
-    if(entradas_red.Vdc > DC_OVERVOLTAGE_LIMIT)
+    if(Filt_freq_Vdc.Un > DC_OVERVOLTAGE_LIMIT)
     {
         Counts.count4++;
 
@@ -1647,11 +1647,11 @@ void TUPA_protect(void)
     }
 
     // Protecao do Chopper
-    if(entradas_red.Vdc > MAX_CHOPPER_LIMIT)
+    if(Filt_freq_Vdc.Un > MAX_CHOPPER_LIMIT)
     {
         flag.Chopper_On = 1;
     }
-    else if(entradas_red.Vdc < MIN_CHOPPER_LIMIT)
+    else if(Filt_freq_Vdc.Un < MIN_CHOPPER_LIMIT)
     {
 
         flag.Chopper_On = 0;
