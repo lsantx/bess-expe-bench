@@ -386,7 +386,6 @@ inv_nro_muestras = 1.0/N_amostras;
 //Loop infinito
  while(1)
 {
-         flag.BSC_PulsesOn = *Recv.recv1;
        //Carrega a flag relacionada com a entrada digital responsável por verificar se a flag Shutdown do conjunto 1 foi acionada
          flag.Com_DSP1_read = GpioDataRegs.GPADAT.bit.GPIO25;    //Estado do contator de conexão com a rede
         //
@@ -405,8 +404,6 @@ inv_nro_muestras = 1.0/N_amostras;
            piv_ch.enab   = 1;
            PIbt_vout.enab = 1;
            PIbu_vout.enab = 1;
-
-           Pref = *Recv.recv2;
 
            if(Pref > 0)
            {
@@ -574,6 +571,7 @@ inv_nro_muestras = 1.0/N_amostras;
 interrupt void IPC3_INT(void)
 {
     Recv.recv1 = IpcRegs.IPCRECVADDR;
+    flag.BSC_PulsesOn = *Recv.recv1;
     IpcRegs.IPCACK.bit.IPC3 = 1;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
@@ -581,7 +579,8 @@ interrupt void IPC3_INT(void)
 interrupt void IPC0_INT(void)
 {
     Recv.recv2 = IpcRegs.IPCRECVADDR;
-    IpcRegs.IPCACK.bit.IPC3 = 1;
+    Pref = *Recv.recv2;
+    IpcRegs.IPCACK.bit.IPC0 = 1;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 

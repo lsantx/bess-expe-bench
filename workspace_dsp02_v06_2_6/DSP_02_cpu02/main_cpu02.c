@@ -404,7 +404,6 @@ inv_nro_muestras = 1.0/N_amostras;
 //Loop infinito
  while(1)
 {
-        flag.BSC_PulsesOn = *Recv.recv1;
         //
         // These functions are in the F2837xD_EPwm.c file
         //
@@ -423,8 +422,6 @@ inv_nro_muestras = 1.0/N_amostras;
            PIbu_vout.enab = 1;
 
            //Reseta para Descarga (1) e Carga (2)
-           Pref = *Recv.recv2;
-
            if(Pref > 0)
            {
              flag.Bat_Discharge = 1;               //Habilita Descarga
@@ -598,6 +595,7 @@ interrupt void IPC2_INT(void)
 interrupt void IPC3_INT(void)
 {
     Recv.recv1 = IpcRegs.IPCRECVADDR;
+    flag.BSC_PulsesOn = *Recv.recv1;
     IpcRegs.IPCACK.bit.IPC3 = 1;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
@@ -605,7 +603,8 @@ interrupt void IPC3_INT(void)
 interrupt void IPC0_INT(void)
 {
     Recv.recv2 = IpcRegs.IPCRECVADDR;
-    IpcRegs.IPCACK.bit.IPC3 = 1;
+    Pref = *Recv.recv2;
+    IpcRegs.IPCACK.bit.IPC0 = 1;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
