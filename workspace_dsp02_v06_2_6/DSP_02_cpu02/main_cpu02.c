@@ -49,20 +49,14 @@ typedef struct {
     float feedforward;
 } sPI;
 
-#define PI_IDIS_DEFAULTS    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_DIS_KP, PI_DIS_KI, 0, 0, PI_DIS_OUTMIN , PI_DIS_OUTMAX, 0}
-#define PI_ICH_DEFAULTS     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_ICH_KP, PI_ICH_KI, 0, 0, PI_ICH_OUTMIN , PI_ICH_OUTMAX, 0}
+#define PI_I_DEFAULTS    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_I_KP, PI_I_KI, 0, 0, PI_I_OUTMIN , PI_I_OUTMAX, 0}
 #define PI_VCH_DEFAULTS     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_VCH_KP, PI_VCH_KI, 0, 0, 0, 0, 0}
-#define PI_BTVOUT_DEFAULTS  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_BTVOUT_KP, PI_BTVOUT_KI, 0, 0, PI_BTVOUT_OUTMIN , PI_BTVOUT_OUTMAX, 0}
-#define PI_BUVOUT_DEFAULTS  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_BUVOUT_KP, PI_BUVOUT_KI, 0, 0, PI_BUVOUT_OUTMIN , PI_BUVOUT_OUTMAX, 0}
-sPI pi_I1_dis = PI_IDIS_DEFAULTS;
-sPI pi_I2_dis = PI_IDIS_DEFAULTS;
-sPI pi_I3_dis = PI_IDIS_DEFAULTS;
-sPI pi_I1_ch  = PI_ICH_DEFAULTS;
-sPI pi_I2_ch  = PI_ICH_DEFAULTS;
-sPI pi_I3_ch  = PI_ICH_DEFAULTS;
+#define PI_VOUT_DEFAULTS  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, PI_VOUT_KP, PI_VOUT_KI, 0, 0, PI_VOUT_OUTMIN , PI_VOUT_OUTMAX, 0}
+sPI pi_I1 = PI_I_DEFAULTS;
+sPI pi_I2 = PI_I_DEFAULTS;
+sPI pi_I3 = PI_I_DEFAULTS;
 sPI piv_ch    = PI_VCH_DEFAULTS;
-sPI PIbt_vout = PI_BTVOUT_DEFAULTS;
-sPI PIbu_vout = PI_BUVOUT_DEFAULTS;
+sPI PI_vout = PI_VOUT_DEFAULTS;
 
 //PWM
 typedef struct{
@@ -142,12 +136,12 @@ typedef struct {
 #define FILTER_DEFAULTS_0_1_HZ {0,0,0,0,0.00006981317007977319,0.00006981317007977319}
 #define FILTER_DEFAULTS_2_HZ {0,0,0,0,0.00139626340159546372,0.00139626340159546372}
 #define FILTER_DEFAULTS_1_HZ {0,0,0,0,0.00069813170079773186,0.00069813170079773186}
-
+#define FILTER_DEFAULTS_0_1_HZ {0,0,0,0,0.00006981317007977319,0.00006981317007977319}
 sFilter1st fil1nVbat = FILTER_DEFAULTS_0_1_HZ;
 sFilter1st fil1nVbat2 = FILTER_DEFAULTS_0_1_HZ;
 sFilter1st fil1nVbat3 = FILTER_DEFAULTS_0_1_HZ;
 sFilter1st Filt_current = FILTER_DEFAULTS_2_HZ;
-sFilter1st Filt_freq_Vdc = FILTER_DEFAULTS_1_HZ;
+sFilter1st Filt_freq_Vdc = FILTER_DEFAULTS_0_1_HZ;
 
 typedef struct{
 float qn;
@@ -243,7 +237,7 @@ float Ibat_vec[N_data_log];
 int send = 0;
 
 //Variaveis de teste
-float  gn  = 937.5;
+float  gn  = 763;
 
 // Variaveis de Controle
 float Ts = TSAMPLE;
@@ -255,7 +249,7 @@ float Vboost      =  14.4;                      //Tensao de Boost
 float Vfloat      =  13.6;                      //Tensao de Float
 float Vref        =  0;                         //Referencia da tensao de carga
 float Pref        = 0;
-float Voutref    = 250;
+float Voutref     = 240;
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
@@ -267,7 +261,6 @@ Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0;
 Uint32 N_amostras = 60000;
 
 bool flag_zero = true;
-
 //Main
 void main(void)
 
@@ -411,15 +404,11 @@ inv_nro_muestras = 1.0/N_amostras;
         //if(flag.BSC_PulsesOn == 1)
         {
            //Habilita os controladores PIs
-           pi_I1_dis.enab = 1;
-           pi_I2_dis.enab = 1;
-           pi_I3_dis.enab = 1;
-           pi_I1_ch.enab = 1;
-           pi_I2_ch.enab = 1;
-           pi_I3_ch.enab = 1;
+           pi_I1.enab = 1;
+           pi_I2.enab = 1;
+           pi_I3.enab = 1;
            piv_ch.enab   = 1;
-           PIbt_vout.enab = 1;
-           PIbu_vout.enab = 1;
+           PI_vout.enab = 1;
 
            //Reseta para Descarga (1) e Carga (2)
            if(Pref > 0)
@@ -462,7 +451,6 @@ inv_nro_muestras = 1.0/N_amostras;
                EPwm10Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
                EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
                EDIS;
-
            }
 
            if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
@@ -487,7 +475,7 @@ inv_nro_muestras = 1.0/N_amostras;
                EPwm10Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
                EDIS;
            }
-           else
+           else if(flag.Bat_Discharge == 0 && flag.Bat_Charge == 0)
            {
                // Ativa o Tipzone dos PWM e desabilita os pulsos
                EALLOW;
@@ -506,15 +494,11 @@ inv_nro_muestras = 1.0/N_amostras;
         else
         {
            //Desabilita os controladores PIs
-           pi_I1_dis.enab = 0;
-           pi_I2_dis.enab = 0;
-           pi_I3_dis.enab = 0;
-           pi_I1_ch.enab  = 0;
-           pi_I2_ch.enab  = 0;
-           pi_I3_ch.enab  = 0;
+           pi_I1.enab = 0;
+           pi_I2.enab = 0;
+           pi_I3.enab = 0;
            piv_ch.enab    = 0;
-           PIbt_vout.enab = 0;
-           PIbu_vout.enab = 0;
+           PI_vout.enab = 0;
 
            // Ativa o Tipzone dos PWM e desabilita os pulsos
            EALLOW;
@@ -531,7 +515,6 @@ inv_nro_muestras = 1.0/N_amostras;
 
            VoutRamp.uin = Filt_freq_Vdc.Yn;
            VoutRamp.y = Filt_freq_Vdc.Yn;
-
         }
 
 
@@ -669,7 +652,7 @@ interrupt void adca1_isr(void)
            entradas_dc.Vdc = Filt_freq_Vdc.Yn;
 
            //Medicao 1 da Tensao do banco de baterias
-           entradas_dc.Vb1 = 0.400610162445055*AdccResultRegs.ADCRESULT1 - gn;
+           entradas_dc.Vb1 = 0.400610162445055*AdccResultRegs.ADCRESULT1 - 937.5;
            fil1nVbat.Un = entradas_dc.Vb1;
            TUPA_First_order_signals_filter(&fil1nVbat);          //filtra a tensao da bateria
 
@@ -736,52 +719,39 @@ interrupt void adca1_isr(void)
              soc_estimation(&soc_est);
          }
         //////////////////////////////////controle de Corrente modo Boost (Descarga)//////////////////////////////
-        if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
+        if(flag.Bat_Charge != 0 || flag.Bat_Discharge != 0)
         {
             VoutRamp.uin = Voutref;
 
-            PIbt_vout.setpoint = VoutRamp.y;
-            PIbt_vout.feedback = Filt_freq_Vdc.Yn;
+            PI_vout.setpoint = VoutRamp.y;
+            PI_vout.feedback = Filt_freq_Vdc.Yn;
 
-            TUPA_Pifunc(&PIbt_vout);                   // Controle
+            TUPA_Pifunc(&PI_vout);                   // Controle
             //Controle de Corrente
-            pi_I1_dis.setpoint = PIbt_vout.output / Nb_int;
-            pi_I1_dis.feedback = entradas_dc.I1;
-            TUPA_Pifunc(&pi_I1_dis);
+            if(flag.Bat_Discharge == 1)
+            {
+                pi_I1.setpoint = PI_vout.output / Nb_int;
+                pi_I1.feedback = entradas_dc.I1;
+            }
+            else if(flag.Bat_Charge == 1)
+            {
+                if(PI_vout.output > 10) PI_vout.output = 10;
+                if(PI_vout.output < -10) PI_vout.output = -10;
+                pi_I1.setpoint = -PI_vout.output / Nb_int;
+                pi_I1.feedback = -entradas_dc.I1;
+            }
+
+            TUPA_Pifunc(&pi_I1);
 
             //PWM
-            pwm_dc.din = pi_I1_dis.output;
+            pwm_dc.din = pi_I1.output;
         }
 
-        //////////////////////////////////controle do modo Buck (Carga a Corrente e Tensao Constante)/////////////////////
-        if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
-        {
-            VoutRamp.uin = Voutref;
-            ///////////////////Malha externa de controle da tensão
-            ///controle
-            PIbu_vout.setpoint = VoutRamp.y;
-            PIbu_vout.feedback = Filt_freq_Vdc.Yn;
-
-            TUPA_Pifunc(&PIbu_vout);
-
-            //setpoint para a malha interna
-            pi_I1_ch.setpoint = PIbu_vout.output  / Nb_int;
-//            pi_I1_ch.setpoint =__divf32(I_ch_ref,Nb_int);   During communication
-
-            //Malha interna - controle de corrente
-
-            //Controle de Corrente (PI)
-            pi_I1_ch.feedback = -entradas_dc.I1;
-            TUPA_Pifunc(&pi_I1_ch);
-            //Referencia para o PWM
-            pwm_dc.din = pi_I1_ch.output;
-
-        }
         //PWM
         TUPA_pwm(&pwm_dc,EPwm6Regs.TBPRD);
 
-       // duty cycle
-          EPwm6Regs.CMPA.bit.CMPA = pwm_dc.Ta;
+        // duty cycle
+        EPwm6Regs.CMPA.bit.CMPA = pwm_dc.Ta;
         //EPwm6Regs.CMPA.bit.CMPA = (50000000/PWM_FREQ)*0.5;
     }
 
@@ -809,30 +779,24 @@ interrupt void adca2_isr(void)
         entradas_dc.I2 = 0.007310862860686*AdcaResultRegs.ADCRESULT1 - 0.007310862860686*channel_offset.CH_2;
 
         //////////////////////////////////controle de Corrente modo Boost (Descarga)/////////////////////
-        if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
+        if(flag.Bat_Charge != 0 || flag.Bat_Discharge != 0)
         {
+            pi_I2.setpoint = pi_I1.setpoint;
+
+            if(flag.Bat_Discharge == 1)
+            {
+                pi_I2.feedback = entradas_dc.I2;
+            }
+            else if(flag.Bat_Charge == 1)
+            {
+                pi_I2.feedback = -entradas_dc.I2;
+            }
 
             //Controle de Corrente
-            pi_I2_dis.setpoint = pi_I1_dis.setpoint;
-            pi_I2_dis.feedback = entradas_dc.I2;
-            TUPA_Pifunc(&pi_I2_dis);
+            TUPA_Pifunc(&pi_I2);
 
             //PWM
-            pwm_dc2.din = pi_I2_dis.output;
-        }
-
-        //////////////////////////////////controle de Corrente modo Buck (Carga a Corrente Constante)/////////////////////
-        if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
-        {
-
-            // Referencia de corrente para equalizacao
-            pi_I2_ch.setpoint = pi_I1_ch.setpoint;
-
-            //Controle de Corrente
-            pi_I2_ch.feedback = -entradas_dc.I2;
-            TUPA_Pifunc(&pi_I2_ch);
-            //Referencia para o PWM
-            pwm_dc2.din = pi_I2_ch.output;
+            pwm_dc2.din = pi_I2.output;
         }
 
         //PWM
@@ -866,34 +830,30 @@ interrupt void adca3_isr(void)
          entradas_dc.I3 = 0.007432592601990*AdcaResultRegs.ADCRESULT2 - 0.007432592601990*channel_offset.CH_3;
 
          //////////////////////////////////controle de Corrente modo Boost (Descarga)/////////////////////
-         if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
+         if(flag.Bat_Charge != 0 || flag.Bat_Discharge != 0)
          {
              //Controle de Corrente
-             pi_I3_dis.setpoint = pi_I1_dis.setpoint;
-             pi_I3_dis.feedback = entradas_dc.I3;
-             TUPA_Pifunc(&pi_I3_dis);
+             pi_I3.setpoint = pi_I1.setpoint;
+
+             if(flag.Bat_Discharge == 1)
+             {
+                 pi_I3.feedback = entradas_dc.I3;
+             }
+             else if(flag.Bat_Charge == 1)
+             {
+                 pi_I3.feedback = -entradas_dc.I3;
+             }
+
+             TUPA_Pifunc(&pi_I3);
 
              //PWM
-             pwm_dc3.din = pi_I3_dis.output;
-         }
-
-         //////////////////////////////////controle de Corrente modo Buck (Carga a Corrente Constante)/////////////////////
-         if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
-         {
-             // Referencia de corrente para equalizacao
-             pi_I3_ch.setpoint = pi_I1_ch.setpoint;
-
-             //Controle de Corrente
-             pi_I3_ch.feedback = -entradas_dc.I3;
-             TUPA_Pifunc(&pi_I3_ch);
-             //Referencia para o PWM
-             pwm_dc3.din = pi_I3_ch.output;
+             pwm_dc3.din = pi_I3.output;
          }
 
          //PWM
          TUPA_pwm(&pwm_dc3,EPwm10Regs.TBPRD);
 
-           EPwm10Regs.CMPA.bit.CMPA = pwm_dc3.Ta;
+         EPwm10Regs.CMPA.bit.CMPA = pwm_dc3.Ta;
          //EPwm10Regs.CMPA.bit.CMPA = (50000000/PWM_FREQ)*0.5;
     }
 
@@ -1075,21 +1035,21 @@ void TUPA_protect(void)
   }
 
    // Protecao de sobretensao na bateria
-   if(entradas_dc.Vbt_filt > BAT_OVERVOLTAGE_LIMIT)
-   {
-       Counts.count8++;
+    if(entradas_dc.Vbt_filt > BAT_OVERVOLTAGE_LIMIT)
+    {
+      Counts.count8++;
 
-       if(Counts.count8 > 3)
-       {
-         flag.Shutdown_Conv = 1;
-         fault = FAULT_VBAT_OVERVOLTAGE;
-         Counts.count8 = 0;
-       }
-   }
-   else
-   {
-       Counts.count8 = 0;
-   }
+      if(Counts.count8 > 3)
+      {
+        flag.Shutdown_Conv = 1;
+        fault = FAULT_VBAT_OVERVOLTAGE;
+        Counts.count8 = 0;
+      }
+    }
+    else
+    {
+      Counts.count8 = 0;
+    }
 
    /*
    // Protecao de subtensao na bateria

@@ -46,7 +46,7 @@
 #define PI_Q_OUTMIN    -9000
 
 // Ganhos do controlador PI do ativo
-#define PI_P_KI         12.5664
+#define PI_P_KI         5
 #define PI_P_OUTMAX     9000
 #define PI_P_OUTMIN    -9000
 
@@ -60,11 +60,11 @@
 
 // Limites para prote��es
 #define OVER_CURRENT_GRID_LIMIT          30
-#define DC_OVERVOLTAGE_LIMIT             700
+#define DC_OVERVOLTAGE_LIMIT             580
 #define DC_PRECHARGE_LIMIT               268
 #define DC_MANUAL_PRECHARGE_LIMIT        260
-#define MAX_CHOPPER_LIMIT                700
-#define MIN_CHOPPER_LIMIT                450
+#define MAX_CHOPPER_LIMIT                580
+#define MIN_CHOPPER_LIMIT                520
 
 // Defini��o das faltas
 #define FAULT_OK                0

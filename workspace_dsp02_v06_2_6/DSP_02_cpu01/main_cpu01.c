@@ -265,7 +265,7 @@ typedef struct{
     float rising;
     float falling;
 } sRamp;
-#define PRamp_default {0,0,0,0,0,0,TSAMPLE,200,-200}
+#define PRamp_default {0,0,0,0,0,0,TSAMPLE,100,-100}
 #define VRamp_default {0,0,0,0,0,0,TSAMPLE,50,-50}
 sRamp QRamp = PRamp_default;
 sRamp PRamp = PRamp_default;
@@ -391,7 +391,7 @@ float Ts = TSAMPLE;
 float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
 float  Iref = 0;
-float  Vdc_ref = 500;
+float  Vdc_ref = 480;
 float  Q_ref   = 0;
 float  P_ref   = 0;
 float  P_control = 0;
@@ -971,7 +971,7 @@ interrupt void adcb1_isr(void)
        {
            //Limita a referencia de potência
            if(P_ref>6000)  P_ref = 6000;
-           if(P_ref<-1800) P_ref = -1800;
+           if(P_ref<-2000) P_ref = -2000;
 
            PRamp.uin = P_ref;
 
@@ -1630,15 +1630,17 @@ void TUPA_protect(void)
     }
 
     // Protecao de sobretensao no dc-link
-    if(Filt_freq_Vdc.Un > DC_OVERVOLTAGE_LIMIT)
+    if(entradas_red.Vdc > DC_OVERVOLTAGE_LIMIT)
     {
         Counts.count4++;
 
-        if(Counts.count4 > 2)
+        if(Counts.count4 > 5)
         {
           flag.Shutdown = 1;
           fault = FAULT_DC_OVERVOLTAGE;
           Counts.count4 = 0;
+
+          flag.Chopper_On = 1;   //Chopper aquii
         }
     }
     else
@@ -1646,14 +1648,13 @@ void TUPA_protect(void)
         Counts.count4 = 0;
     }
 
-    // Protecao do Chopper
-    if(Filt_freq_Vdc.Un > MAX_CHOPPER_LIMIT)
+    // Protecao do Chopper (Choper acima)
+//    if(entradas_red.Vdc > MAX_CHOPPER_LIMIT)
+//    {
+//        flag.Chopper_On = 1;
+//    }
+    if(Filt_freq_Vdc.Un < MIN_CHOPPER_LIMIT && flag.Chopper_On == 1)
     {
-        flag.Chopper_On = 1;
-    }
-    else if(Filt_freq_Vdc.Un < MIN_CHOPPER_LIMIT)
-    {
-
         flag.Chopper_On = 0;
     }
 
@@ -1725,12 +1726,12 @@ void TUPA_StartSequence(void)
                   }
               }
            }
-          //Verifica a flag do chopper de protecao. Se o estado for alto, ativa o Chopper
-          if(flag.Chopper_On == 1)
-          {
-              GpioDataRegs.GPBSET.bit.GPIO33 = 1;
-          }
+     }
 
+     //Verifica a flag do chopper de protecao. Se o estado for alto, ativa o Chopper
+     if(flag.Chopper_On == 1)
+     {
+         GpioDataRegs.GPBSET.bit.GPIO33 = 1;
      }
 
      // Reseta as flags e contadores se flag.Inv_on for estado baixo

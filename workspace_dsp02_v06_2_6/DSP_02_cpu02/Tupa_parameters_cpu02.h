@@ -22,32 +22,20 @@
 #define Ts_div2              TSAMPLE*0.500000
 
 // Ganhos do controlador PI de corrente do conv. dc/dc no modo boost (descarga das baterias)
-#define PI_DIS_KP               0.0050265
-#define PI_DIS_KI               0.8339
-#define PI_DIS_OUTMAX           1
-#define PI_DIS_OUTMIN           0
-
-// Ganhos do controlador PI de corrente do conv. dc/dc no modo buck (carga das baterias)
-#define PI_ICH_KP               0.0050265
-#define PI_ICH_KI               0.8339
-#define PI_ICH_OUTMAX           1
-#define PI_ICH_OUTMIN           0
+#define PI_I_KP               0.0050265
+#define PI_I_KI               0.8339
+#define PI_I_OUTMAX           1
+#define PI_I_OUTMIN          -1
 
 // Ganhos do controlador PI de tensão do conv. dc/dc no modo buck (carga das baterias)
 #define PI_VCH_KP               0.7336
 #define PI_VCH_KI               0.0922
 
 // Ganhos do controlador PI de tensão de saída do conv cc/cc no modo Boost
-#define PI_BTVOUT_KP               0.8079
-#define PI_BTVOUT_KI               0.8435
-#define PI_BTVOUT_OUTMAX           18
-#define PI_BTVOUT_OUTMIN          -18
-
-// Ganhos do controlador PI de tensão de saída do conv cc/cc no modo Buck
-#define PI_BUVOUT_KP               -0.8079
-#define PI_BUVOUT_KI               -0.8435
-#define PI_BUVOUT_OUTMAX           18
-#define PI_BUVOUT_OUTMIN          -18
+#define PI_VOUT_KP               0.209389604766943
+#define PI_VOUT_KI               0.022587208124317
+#define PI_VOUT_OUTMAX           18
+#define PI_VOUT_OUTMIN          -18
 
 // Referências máximas de corrente de descarga e carga
 #define Ir_dis                   16
@@ -56,7 +44,7 @@
 // Limites para proteções
 #define OVER_CURRENT_DC_LIMIT_DISCHARGE      25
 #define OVER_CURRENT_DC_LIMIT_CHARGE         15
-#define DC_OVERVOLTAGE_LIMIT                 325
+#define DC_OVERVOLTAGE_LIMIT                 350
 #define BAT_OVERVOLTAGE_LIMIT                15.5*Nbat_series
 #define BAT_UNDERVOLTAGE_LIMIT               9*Nbat_series
 
