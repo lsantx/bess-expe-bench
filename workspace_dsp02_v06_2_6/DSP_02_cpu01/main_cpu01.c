@@ -265,7 +265,7 @@ typedef struct{
     float rising;
     float falling;
 } sRamp;
-#define PRamp_default {0,0,0,0,0,0,TSAMPLE,100,-100}
+#define PRamp_default {0,0,0,0,0,0,TSAMPLE,300,-300}
 #define VRamp_default {0,0,0,0,0,0,TSAMPLE,50,-50}
 sRamp QRamp = PRamp_default;
 sRamp PRamp = PRamp_default;
@@ -1639,8 +1639,6 @@ void TUPA_protect(void)
           flag.Shutdown = 1;
           fault = FAULT_DC_OVERVOLTAGE;
           Counts.count4 = 0;
-
-          flag.Chopper_On = 1;   //Chopper aquii
         }
     }
     else
@@ -1751,6 +1749,7 @@ void TUPA_StopSequence(void)
     //Verifica se a flag Shutdown esta acionado ou se a Shutdown_Conv da CPU2 esta acionada (IPC6) e interrompe o chaveamento e abre os contatores
      if(flag.Shutdown == 1)
      {
+         flag.Chopper_On = 1;   //Chopper aquii
          flag.AbleToStart = 0;
          flag.GSC_PulsesOn = 0;                        // Interrompe o chaveamento
          flag.BSC_PulsesOn = 0;

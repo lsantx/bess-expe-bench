@@ -44,8 +44,11 @@
 #define PI_VCH_KI               0.0922
 
 // Ganhos do controlador PI de tensão de saída do conv cc/cc no modo Boost
-#define PI_VOUT_KP               0.209389604766943
-#define PI_VOUT_KI               0.022587208124317
+#define PI_VOUT_KP_DIS           0.2724
+#define PI_VOUT_KI_DIS           0.0294
+
+#define PI_VOUT_KP_CH            0.2878
+#define PI_VOUT_KI_CH            0.2884
 #define PI_VOUT_OUTMAX           18
 #define PI_VOUT_OUTMIN          -18
 

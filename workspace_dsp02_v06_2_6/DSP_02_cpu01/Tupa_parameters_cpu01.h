@@ -60,10 +60,10 @@
 
 // Limites para prote��es
 #define OVER_CURRENT_GRID_LIMIT          30
-#define DC_OVERVOLTAGE_LIMIT             580
+#define DC_OVERVOLTAGE_LIMIT             800
 #define DC_PRECHARGE_LIMIT               268
 #define DC_MANUAL_PRECHARGE_LIMIT        260
-#define MAX_CHOPPER_LIMIT                580
+#define MAX_CHOPPER_LIMIT                800
 #define MIN_CHOPPER_LIMIT                520
 
 // Defini��o das faltas
