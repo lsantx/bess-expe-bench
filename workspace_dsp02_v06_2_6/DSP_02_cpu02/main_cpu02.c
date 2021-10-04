@@ -1150,22 +1150,22 @@ void TUPA_protect(void)
    */
 
 
-   // Prote��o de sobretens�o no dc-link
-   if(entradas_dc.Vdc > DC_OVERVOLTAGE_LIMIT)
-   {
-       Counts.count4++;
-
-       if(Counts.count4 > 6)
-       {
-         flag.Shutdown_Conv = 1;
-         fault = FAULT_DC_OVERVOLTAGE;
-         Counts.count4 = 0;
-       }
-   }
-   else
-   {
-       Counts.count4 = 0;
-   }
+//   // Prote��o de sobretens�o no dc-link
+//   if(entradas_dc.Vdc > DC_OVERVOLTAGE_LIMIT)
+//   {
+//       Counts.count4++;
+//
+//       if(Counts.count4 > 6)
+//       {
+//         flag.Shutdown_Conv = 1;
+//         fault = FAULT_DC_OVERVOLTAGE;
+//         Counts.count4 = 0;
+//       }
+//   }
+//   else
+//   {
+//       Counts.count4 = 0;
+//   }
 
    //Verifica se a flag Shutdown foi acionada na CPU01. Se sim, seta a flag Shutdown_Conv para a CPU2
    if(*Recv.recv0 == 1 && flag.AbleToStart == 1) flag.Shutdown_Conv = 1;

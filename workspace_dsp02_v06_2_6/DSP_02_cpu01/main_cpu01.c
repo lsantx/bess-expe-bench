@@ -1614,7 +1614,7 @@ void TUPA_protect(void)
     {
         Counts.count4++;
 
-        if(Counts.count4 > 2)
+        if(Counts.count4 > 4)
         {
           flag.Shutdown = 1;
           fault = FAULT_DC_OVERVOLTAGE;
@@ -1627,11 +1627,11 @@ void TUPA_protect(void)
     }
 
     // Prote��o do Chopper
-    if(entradas_red.Vdc > MAX_CHOPPER_LIMIT)
-    {
-        flag.Chopper_On = 1;
-    }
-    else if(entradas_red.Vdc < MIN_CHOPPER_LIMIT)
+//    if(entradas_red.Vdc > MAX_CHOPPER_LIMIT)
+//    {
+//        flag.Chopper_On = 1;
+//    }
+    if(entradas_red.Vdc < MIN_CHOPPER_LIMIT)
     {
 
         flag.Chopper_On = 0;
@@ -1730,6 +1730,8 @@ void TUPA_StopSequence(void)
     //Verifica se a flag Shutdown est� acionado ou se a Shutdown_Conv da CPU2 est� acionada (IPC6) e interrompe o chaveamento e abre os contatores
      if(flag.Shutdown == 1)
      {
+         flag.Chopper_On = 1;
+
          flag.AbleToStart = 0;
          flag.GSC_PulsesOn = 0;                        // Interrompe o chaveamento
          flag.Inv_on = 0;                              // Reseta o valor de flag.Inv_on

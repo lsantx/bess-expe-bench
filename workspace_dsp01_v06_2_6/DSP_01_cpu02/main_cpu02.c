@@ -1024,22 +1024,22 @@ void TUPA_protect(void)
    }
 */
 
-   // Proteção de sobretensão no dc-link
-   if(entradas_dc.Vdc > DC_OVERVOLTAGE_LIMIT)
-   {
-       Counts.count4++;
-
-       if(Counts.count4 > 6)
-       {
-         flag.Shutdown_Conv = 1;
-         fault = FAULT_DC_OVERVOLTAGE;
-         Counts.count4 = 0;
-       }
-   }
-   else
-   {
-       Counts.count4 = 0;
-   }
+//   // Proteção de sobretensão no dc-link
+//   if(entradas_dc.Vdc > DC_OVERVOLTAGE_LIMIT)
+//   {
+//       Counts.count4++;
+//
+//       if(Counts.count4 > 6)
+//       {
+//         flag.Shutdown_Conv = 1;
+//         fault = FAULT_DC_OVERVOLTAGE;
+//         Counts.count4 = 0;
+//       }
+//   }
+//   else
+//   {
+//       Counts.count4 = 0;
+//   }
 
    //Verifica se a flag Group_com está indicando que a proteção foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
    if(flag.Com_DSP1_read == 1 && flag.AbleToStart == 1) flag.Shutdown_Conv = 1;
