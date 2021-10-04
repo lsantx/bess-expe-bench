@@ -952,7 +952,7 @@ void TUPA_protect(void)
       {
           Counts.count11++;
 
-          if(Counts.count11 > 4)
+          if(Counts.count11 > 15)
           {
               flag.Shutdown_Conv = 1;
               fault = FAULT_OVERCURRENT;
@@ -971,7 +971,7 @@ void TUPA_protect(void)
    {
        Counts.count8++;
 
-       if(Counts.count8 > 3)
+       if(Counts.count8 > 15)
        {
          flag.Shutdown_Conv = 1;
          fault = FAULT_VBAT_OVERVOLTAGE;
@@ -1006,7 +1006,7 @@ void TUPA_protect(void)
    {
        Counts.count4++;
 
-       if(Counts.count4 > 10)
+       if(Counts.count4 > 20)
        {
          flag.Shutdown_Conv = 1;
          fault = FAULT_DC_OVERVOLTAGE;

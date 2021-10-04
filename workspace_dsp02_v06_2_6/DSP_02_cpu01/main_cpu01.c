@@ -971,7 +971,7 @@ interrupt void adcb1_isr(void)
        {
            //Limita a referencia de potência
            if(P_ref>6000)  P_ref = 6000;
-           if(P_ref<-2000) P_ref = -2000;
+           if(P_ref<-2200) P_ref = -2200;
 
            PRamp.uin = P_ref;
 
