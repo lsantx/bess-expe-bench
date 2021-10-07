@@ -6,7 +6,6 @@
 #define Nsample                 1                           // Razão entre freq de amostragem e de chaveamento
 #define TSAMPLE                 1.0/(Nsample*PWM_FREQ)      //Período de amorstrage
 
-#define Nb_int                  3                           // Número de braços do conversor cc/cc (Interleaved)
 #define Nbat_series             16                           // Número de baterias em série
 #define Nbat_string             1                           // Número de strings de bateria
 

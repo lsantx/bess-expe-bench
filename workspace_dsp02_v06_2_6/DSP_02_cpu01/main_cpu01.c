@@ -392,6 +392,7 @@ float  Vdc_ref = 480;
 float  Q_ref   = 0;
 float  Qm      = 0;
 float  Pm      = 0;
+float  P_ref    = 0;
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
@@ -415,6 +416,8 @@ int flag_ena = 0;
 
 // Case Study
 int flag_case_study = 0;
+
+int Nb_int = 3;
 
 //Main
 void main(void)
@@ -742,7 +745,7 @@ interrupt void adcb1_isr(void)
     // Fun��o de in�cio de funcionamento do sistema
     TUPA_StartSequence();
 
-    //Envia a v�riaveis para o npucleo 2
+    //Envia a variaveis para o nucleo 2
     if(Counts.count_ipc == 0)
     {
         IpcRegs.IPCSENDADDR = (Uint32) &flag.Shutdown;
@@ -751,13 +754,19 @@ interrupt void adcb1_isr(void)
 
     if(Counts.count_ipc == 1)
     {
-        IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
+        IpcRegs.IPCSENDADDR = (Uint32) &Nb_int;
         IpcRegs.IPCSET.bit.IPC3 = 1;
+    }
+
+    if(Counts.count_ipc == 2)
+    {
+        IpcRegs.IPCSENDADDR = (Uint32) &P_ref;
+        IpcRegs.IPCSET.bit.IPC0 = 1;
     }
 
     Counts.count_ipc += 1;
 
-    if(Counts.count_ipc == 2) Counts.count_ipc = 0;
+    if(Counts.count_ipc == 3) Counts.count_ipc = 0;
 
     if(flag_ena == 1)
     {

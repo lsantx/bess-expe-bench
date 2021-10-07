@@ -202,10 +202,11 @@ counts Counts = COUNTS_DEFAULTS;
 //V�riaveis para receber dados do CPU1 para o CPU2
 typedef struct{
     unsigned int *recv0;
-    float *recv1;
+    unsigned int *recv1;
+    float *recv2;
 }SrecvCPU1toCPU2;
 
-#define RECV_DEFAULTS {0,0}
+#define RECV_DEFAULTS {0,0,0}
 SrecvCPU1toCPU2 Recv = RECV_DEFAULTS;
 
 ///////////////////////////////////////////// Fun��es ////////////////////////////////////////
@@ -250,6 +251,10 @@ float I_ch_ref    =  5;                         //Refer�ncia da corrente de ca
 float Vboost      =  14.4;                      //Tens�o de Boost
 float Vfloat      =  13.6;                      //Tens�o de Float
 float Vref        =  0;                         //Refer�ncia da tens�o de carga
+float Pref        =  0;
+
+int Nb_int = 3;                                  // Numero de bracos do interleaved
+int Nb_int_ant = 3;
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
@@ -312,13 +317,15 @@ void main(void)
     PieVectTable.ADCA1_INT = &adca1_isr;     //function for ADCA interrupt 1
     PieVectTable.ADCA2_INT = &adca2_isr;     //function for ADCA interrupt 2
     PieVectTable.ADCA3_INT = &adca3_isr;     //function for ADCA interrupt 2
-    PieVectTable.IPC2_INT = &IPC2_INT;       //fun��o da interrup��o do IPC para comunica��o das CPus
-    PieVectTable.IPC3_INT = &IPC3_INT;       //fun��o da interrup��o do IPC para comunica��o das CPus
-    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //Interrup��o ADC_A. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //Interrup��o ADC_A2. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //Interrup��o ADC_A3. Habilita a coluna 1 das interrup��es, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrup��o IPC2 de inter comunica��o entre os CPUS. Habilita a coluna 15 correspondente
-    PieCtrlRegs.PIEIER1.bit.INTx16 = 1;      //interrup��o IPC3 de inter comunica��o entre os CPUS. Habilita a coluna 15 correspondente
+    PieVectTable.IPC2_INT = &IPC2_INT;       //Funcao da interrupcao do IPC para comunicacao das CPus
+    PieVectTable.IPC3_INT = &IPC3_INT;       //Funcao da interrupcao do IPC para comunicacao das CPus
+    PieVectTable.IPC0_INT = &IPC0_INT;
+    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //interrupcao ADC_A. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //interrupcao ADC_A2. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //interrupcao ADC_A3. Habilita a coluna 1 das interrupcoes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrupcao IPC2 de inter comunicacao entre os CPUS. Habilita a coluna 15 correspondente
+    PieCtrlRegs.PIEIER1.bit.INTx16 = 1;      //interrupcao IPC3 de inter comunicacao entre os CPUS. Habilita a coluna 15 correspondente
+    PieCtrlRegs.PIEIER1.bit.INTx13 = 1;      //IPC0 interruption
 //
 // Enable global Interrupts and higher priority real-time debug events:
 //
@@ -396,6 +403,40 @@ inv_nro_muestras = 1.0/N_amostras;
 //Loop infinito
  while(1)
 {
+         // Verifica o numero de bracos ativos
+         if(Nb_int == 3 && Nb_int != Nb_int_ant)
+         {
+             EPwm9Regs.ETSEL.bit.SOCAEN   = 1;
+             EPwm9Regs.TBPHS.bit.TBPHS   = (EPwm9Regs.TBPRD)*2/3;                     // Phase is 120 degrees
+             EPwm9Regs.TBCTL.bit.PHSDIR  = TB_DOWN;
+
+             EPwm10Regs.ETSEL.bit.SOCAEN = 1;
+             EPwm10Regs.TBPHS.bit.TBPHS  = (EPwm10Regs.TBPRD)*2/3;
+             EPwm10Regs.TBCTL.bit.PHSDIR = TB_UP;
+
+             Nb_int_ant = Nb_int;
+         }
+
+         else if(Nb_int == 2 && Nb_int != Nb_int_ant)
+         {
+             EPwm9Regs.ETSEL.bit.SOCAEN   = 1;
+             EPwm9Regs.TBPHS.bit.TBPHS   = (EPwm9Regs.TBPRD);                     // Phase is 120 degrees
+             EPwm9Regs.TBCTL.bit.PHSDIR  = TB_DOWN;
+
+             EPwm10Regs.ETSEL.bit.SOCAEN = 0;                   // Disable SOC on A group
+
+             Nb_int_ant = Nb_int;
+         }
+
+         else if(Nb_int == 1 && Nb_int != Nb_int_ant)
+         {
+             EPwm9Regs.ETSEL.bit.SOCAEN   = 0;                   // Disable SOC on A group
+
+             EPwm10Regs.ETSEL.bit.SOCAEN  = 0;                   // Disable SOC on A group
+
+             Nb_int_ant = Nb_int;
+         }
+
          //Alterna entre modo de carga e descarga do banco de baterias
          if(flag.Bat_Mode == 1)        //Descarga
          {
@@ -433,49 +474,136 @@ inv_nro_muestras = 1.0/N_amostras;
 
            if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
            {
-               EPwm6Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM6A on event A, up count
-               EPwm6Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM6A on event A, down count
-               EPwm9Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM9A on event A, up count
-               EPwm9Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM9A on event A, down count
-               EPwm10Regs.AQCTLA.bit.CAU = AQ_CLEAR;       // Clear PWM10A on event A, up count
-               EPwm10Regs.AQCTLA.bit.CAD = AQ_SET;         // Set PWM10A on event A, down count
+               if(Nb_int == 3)
+               {
+                  EPwm6Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM6A on event A, up count
+                  EPwm6Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM6A on event A, down count
+                  EPwm9Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM9A on event A, up count
+                  EPwm9Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM9A on event A, down count
+                  EPwm10Regs.AQCTLA.bit.CAU = AQ_CLEAR;       // Clear PWM10A on event A, up count
+                  EPwm10Regs.AQCTLA.bit.CAD = AQ_SET;         // Set PWM10A on event A, down count
 
-               // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
-               EALLOW;
-               EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
-               EPwm6Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
-               EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
-               EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
-               EPwm9Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
-               EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
-               EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
-               EPwm10Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
-               EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
-               EDIS;
+                  // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                  EALLOW;
+                  EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
+                  EPwm6Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                  EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
+                  EPwm9Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                  EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                  EPwm10Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                  EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EDIS;
+               }
+
+               if(Nb_int == 2)
+               {
+                  EPwm6Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM6A on event A, up count
+                  EPwm6Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM6A on event A, down count
+                  EPwm9Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM9A on event A, up count
+                  EPwm9Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM9A on event A, down count
+
+                  // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                  EALLOW;
+                  EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
+                  EPwm6Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                  EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
+                  EPwm9Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                  EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                  EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output B
+                  EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EDIS;
+               }
+
+               if(Nb_int == 1)
+               {
+                  EPwm6Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM6A on event A, up count
+                  EPwm6Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM6A on event A, down count
+
+                  // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                  EALLOW;
+                  EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
+                  EPwm6Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                  EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
+                  EPwm9Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                  EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                  EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                  EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                  EDIS;
+               }
+
 
            }
 
            if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
            {
-               EPwm6Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM6A on event A, up count
-               EPwm6Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM6A on event A, down count
-               EPwm9Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM9A on event A, up count
-               EPwm9Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM9A on event A, down count
-               EPwm10Regs.AQCTLA.bit.CAU = AQ_SET;           // Set PWM10A on event A, up count
-               EPwm10Regs.AQCTLA.bit.CAD = AQ_CLEAR;         // Clear PWM10A on event A, down count
+               if(Nb_int == 3)
+               {
+                   EPwm6Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM6A on event A, up count
+                   EPwm6Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM6A on event A, down count
+                   EPwm9Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM9A on event A, up count
+                   EPwm9Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM9A on event A, down count
+                   EPwm10Regs.AQCTLA.bit.CAU = AQ_SET;           // Set PWM10A on event A, up count
+                   EPwm10Regs.AQCTLA.bit.CAD = AQ_CLEAR;         // Clear PWM10A on event A, down count
 
-               // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
-               EALLOW;
-               EPwm6Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM6
-               EPwm6Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
-               EPwm6Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
-               EPwm9Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM9
-               EPwm9Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
-               EPwm9Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
-               EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
-               EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
-               EPwm10Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
-               EDIS;
+                   // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                   EALLOW;
+                   EPwm6Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM6
+                   EPwm6Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm6Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm9Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM9
+                   EPwm9Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm9Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                   EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                   EPwm10Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
+                   EDIS;
+               }
+
+               if(Nb_int == 2)
+               {
+                   EPwm6Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM6A on event A, up count
+                   EPwm6Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM6A on event A, down count
+                   EPwm9Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM9A on event A, up count
+                   EPwm9Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM9A on event A, down count
+
+                   // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                   EALLOW;
+                   EPwm6Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM6
+                   EPwm6Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm6Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm9Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM9
+                   EPwm9Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm9Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                   EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                   EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                   EDIS;
+               }
+
+               if(Nb_int == 1)
+               {
+                   EPwm6Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM6A on event A, up count
+                   EPwm6Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM6A on event A, down count
+
+                   // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                   EALLOW;
+                   EPwm6Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM6
+                   EPwm6Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm6Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm9Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM9
+                   EPwm9Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm9Regs.TZCTL.bit.TZB = 0x2;    // Trip action set to force-low for output B
+                   EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                   EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                   EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                   EDIS;
+               }
            }
         }
         else
@@ -560,7 +688,7 @@ inv_nro_muestras = 1.0/N_amostras;
 }
 }
 
-//Interrup��o do IPC2 para comunica��o com a CPU02
+//interrupcao do IPC2 para comunicacao com a CPU02
 interrupt void IPC2_INT(void)
 {
     Recv.recv0 = IpcRegs.IPCRECVADDR;
@@ -571,7 +699,16 @@ interrupt void IPC2_INT(void)
 interrupt void IPC3_INT(void)
 {
     Recv.recv1 = IpcRegs.IPCRECVADDR;
+    Nb_int = *Recv.recv1;
     IpcRegs.IPCACK.bit.IPC3 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+interrupt void IPC0_INT(void)
+{
+    Recv.recv2 = IpcRegs.IPCRECVADDR;
+    Pref = *Recv.recv2;
+    IpcRegs.IPCACK.bit.IPC0 = 1;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
@@ -765,8 +902,8 @@ interrupt void adca1_isr(void)
             TUPA_Pifunc(&piv_ch);
 
             //setpoint para a malha interna
-            pi_I1_ch.setpoint = piv_ch.output;
-//            pi_I1_ch.setpoint =__divf32(I_ch_ref,Nb_int);   During communication
+              pi_I1_ch.setpoint = __divf32(I_ch_ref,Nb_int);
+//            pi_I1_ch.setpoint = __divf32(I_ch_ref,Nb_int);  // During communication
 
             //Malha interna - controle de corrente
 
