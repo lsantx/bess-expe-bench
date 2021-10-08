@@ -825,28 +825,28 @@ interrupt void adca1_isr(void)
          TUPA_Ramp(&VRamp);                          //Rampa da refer�ncia da tens�o para o modo de descarga
 
          //////////////////////////////Communication///////////////////////////////////////////
-         if(*Recv.recv1>0.0001)
-         {
-             flag.Bat_Mode = 1;
-             I_dis_ref = __divf32(*Recv.recv1, entradas_dc.Vbt_filt);
-             flag_zero = true;
-         }
-         if(*Recv.recv1<-0.0001)
-         {
-             flag.Bat_Mode = 2;
-             I_ch_ref = - __divf32(*Recv.recv1, entradas_dc.Vbt_filt);
-             flag_zero = true;
-
-         }
-         else
-         {
-             if (flag_zero == true)
-             {
-                 I_ch_ref = 0;
-                 I_dis_ref = 0;
-                 flag_zero = false;
-             }
-         }
+//         if(*Recv.recv1>0.0001)
+//         {
+//             flag.Bat_Mode = 1;
+//             I_dis_ref = __divf32(*Recv.recv1, entradas_dc.Vbt_filt);
+//             flag_zero = true;
+//         }
+//         if(*Recv.recv1<-0.0001)
+//         {
+//             flag.Bat_Mode = 2;
+//             I_ch_ref = - __divf32(*Recv.recv1, entradas_dc.Vbt_filt);
+//             flag_zero = true;
+//
+//         }
+//         else
+//         {
+//             if (flag_zero == true)
+//             {
+////                 I_ch_ref = 0;
+////                 I_dis_ref = 0;
+//                 flag_zero = false;
+//             }
+//         }
 
          ///////////////////////////////SOC Estimation/////////////////////////////////////////
          if(soc_est.enable == 1)
@@ -902,8 +902,8 @@ interrupt void adca1_isr(void)
             TUPA_Pifunc(&piv_ch);
 
             //setpoint para a malha interna
-              pi_I1_ch.setpoint = __divf32(I_ch_ref,Nb_int);
-//            pi_I1_ch.setpoint = __divf32(I_ch_ref,Nb_int);  // During communication
+//            pi_I1_ch.setpoint = __divf32(I_ch_ref,Nb_int);
+            pi_I1_ch.setpoint = __divf32(I_ch_ref,Nb_int);  // During communication
 
             //Malha interna - controle de corrente
 

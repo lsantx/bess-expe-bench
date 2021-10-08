@@ -768,11 +768,13 @@ interrupt void adcb1_isr(void)
 
     if(Counts.count_ipc == 3) Counts.count_ipc = 0;
 
+    flag_ena = 1;
+
     if(flag_ena == 1)
     {
         Q_ref = sci_msgA.qref;
         soc = *Recv.recv1;
-        pout = Pm;
+        pout = Nb_int;
         qout = Qm;
 
         flag_tx += 1;
