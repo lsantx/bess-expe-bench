@@ -404,6 +404,8 @@ Uint16 reset_sci = 0;
 int32 flag_tx = 0;
 int flag_ena = 0;
 
+int Nb_int = 3;
+
 //Main
 void main(void)
 
@@ -479,7 +481,7 @@ void main(void)
     IER = M_INT1 | M_INT9; //Habilita a linha da tabela de interrup��o. correspondente ao ADC_B, pg 79 do material do workshop
 
     InitCpuTimers();
-    ConfigCpuTimer(&CpuTimer0, 200, 50000);
+    ConfigCpuTimer(&CpuTimer0, 200, 111.11);
     CpuTimer0Regs.TCR.all = 0x4001;
 
 // Configure GPIOs
@@ -584,6 +586,13 @@ interrupt void IPC1_INT(void)
 interrupt void isr_cpu_timer0(void)
 {
     Uint16 i;
+
+    flag_ena = 1;
+
+    Nb_int = sci_msgA.pref;
+
+    IpcRegs.IPCSENDADDR = (Uint32) &Nb_int;
+    IpcRegs.IPCSET.bit.IPC2 = 1;
 
     if (flag_ena == 1)
     {

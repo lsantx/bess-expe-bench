@@ -172,7 +172,7 @@ typedef struct{
 #define COUNTS_DEFAULTS {0,0,0,0,0,0,0,0,0,0,0}
 counts Counts = COUNTS_DEFAULTS;
 
-//Váriaveis para enviar dados do CPU2 para o CPU1
+//VÃ¡riaveis para enviar dados do CPU2 para o CPU1
 typedef struct{
     unsigned int send0;
     float send1;
@@ -181,16 +181,16 @@ typedef struct{
 #define SEND_DEFAULTS {0,0}
 SsendCPU2toCPU1 Send = SEND_DEFAULTS;
 
-//Váriaveis para receber dados do CPU1 para o CPU2
+//VÃ¡riaveis para receber dados do CPU1 para o CPU2
 typedef struct{
     unsigned int *recv0;
-    float *recv1;
+    int *recv1;
 }SrecvCPU1toCPU2;
 
 #define RECV_DEFAULTS {0,0}
 SrecvCPU1toCPU2 Recv = RECV_DEFAULTS;
 
-///////////////////////////////////////////// Funções ////////////////////////////////////////
+///////////////////////////////////////////// FunÃ§Ãµes ////////////////////////////////////////
 // Control
 void TUPA_Pifunc(sPI *);
 void TUPA_protect(void);
@@ -216,21 +216,21 @@ float32 AdcResults3[RESULTS_BUFFER_SIZE];
 float Vbat_vec[N_data_log] ;
 float Ibat_vec[N_data_log];
 
-//Variaveis de comunicação entre o CPUs
+//Variaveis de comunicaÃ§Ã£o entre o CPUs
 int send = 0;
 
-//Váriaveis de teste
+//VÃ¡riaveis de teste
 float  gn   = 934.0;
 
-// Váriáveis de Controle
+// VÃ¡riÃ¡veis de Controle
 float Ts = TSAMPLE;
 float Van = 0, Vbn = 0, Vcn = 0 , vmin = 0, vmax = 0, Vao = 0, Vbo = 0, Vco = 0;
 
-float I_dis_ref   =  5;                         //Referência da corrente de descarga (modo Boost)
-float I_ch_ref    =  5;                         //Referência da corrente de carga (modo Buck)
-float Vboost      =  14.4;                      //Tensão de Boost
-float Vfloat      =  13.6;                      //Tensão de Float
-float Vref        =  0;                         //Referência da tensão de carga
+float I_dis_ref   =  5;                         //ReferÃªncia da corrente de descarga (modo Boost)
+float I_ch_ref    =  5;                         //ReferÃªncia da corrente de carga (modo Buck)
+float Vboost      =  14.4;                      //TensÃ£o de Boost
+float Vfloat      =  13.6;                      //TensÃ£o de Float
+float Vref        =  0;                         //ReferÃªncia da tensÃ£o de carga
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
@@ -241,6 +241,8 @@ Uint16 first_scan = 1; Uint16 first_scan2 = 1; Uint16 first_scan3 = 1;
 Uint32 sum_CH1 = 0; Uint32 sum_CH2 = 0; Uint32 sum_CH3 = 0;
 Uint32 N_amostras = 60000;
 
+int Nb_int = 3;                                  // Numero de bracos do interleaved
+int Nb_int_ant = 3;
 
 //Main
 void main(void)
@@ -292,19 +294,22 @@ void main(void)
     PieVectTable.ADCA1_INT = &adca1_isr;     //function for ADCA interrupt 1
     PieVectTable.ADCA2_INT = &adca2_isr;     //function for ADCA interrupt 2
     PieVectTable.ADCA3_INT = &adca3_isr;     //function for ADCA interrupt 2
-    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //Interrupção ADC_A. Habilita a coluna 1 das interrupções, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //Interrupção ADC_A2. Habilita a coluna 1 das interrupções, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //Interrupção ADC_A3. Habilita a coluna 1 das interrupções, pg 79 do material do workshop
-    PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrupção IPC2 de inter comunicação entre os CPUS. Habilita a coluna 15 correspondente
+    PieVectTable.IPC2_INT = &IPC2_INT;       //funï¿½ï¿½o da interrupï¿½ï¿½o do IPC para comunicaï¿½ï¿½o das CPus
+    PieCtrlRegs.PIEIER1.bit.INTx1 = 1;       //InterrupÃ§Ã£o ADC_A. Habilita a coluna 1 das interrupÃ§Ãµes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER10.bit.INTx2 = 1;      //InterrupÃ§Ã£o ADC_A2. Habilita a coluna 1 das interrupÃ§Ãµes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER10.bit.INTx3 = 1;      //InterrupÃ§Ã£o ADC_A3. Habilita a coluna 1 das interrupÃ§Ãµes, pg 79 do material do workshop
+    PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrupÃ§Ã£o IPC2 de inter comunicaÃ§Ã£o entre os CPUS. Habilita a coluna 15 correspondente
+    PieCtrlRegs.PIEIER1.bit.INTx15 = 1;      //interrupcao IPC2 de inter comunicacao entre os CPUS. Habilita a coluna 15 correspondente
 //
+
 // Enable global Interrupts and higher priority real-time debug events:
 //
-    IER |= (M_INT10+M_INT1); //Habilita a linha da tabela de interrupção. correspondente ao ADC_B, pg 79 do material do workshop
+    IER |= (M_INT10+M_INT1); //Habilita a linha da tabela de interrupÃ§Ã£o. correspondente ao ADC_B, pg 79 do material do workshop
 
     EDIS;
 
-//Aguarda o CPU1 carregar as configurações da memória e dos periféricos. Após isso, o CPU02 está habilitado para continuar o carregamento dos periféricos associados a ele
-//Lembrete. Os IPCs que disparam interrupção são o 0,1,2 e 3. Os outros não tem interrupção e podem ser usados como flags
+//Aguarda o CPU1 carregar as configuraÃ§Ãµes da memÃ³ria e dos perifÃ©ricos. ApÃ³s isso, o CPU02 estÃ¡ habilitado para continuar o carregamento dos perifÃ©ricos associados a ele
+//Lembrete. Os IPCs que disparam interrupÃ§Ã£o sÃ£o o 0,1,2 e 3. Os outros nÃ£o tem interrupÃ§Ã£o e podem ser usados como flags
 
     while(IpcRegs.IPCSTS.bit.IPC5 == 0);          //Loop finito para aguardar o carregamento do CPU02
     IpcRegs.IPCACK.bit.IPC5 = 1;                  //Limpa a flag do IPC5
@@ -329,7 +334,7 @@ void main(void)
 
     EDIS;
 
-    // Ativa o Tipzone dos PWM e desabilita os pulsos até o comando da flag.GSC_PulsesOn for habilitado
+    // Ativa o Tipzone dos PWM e desabilita os pulsos atÃ© o comando da flag.GSC_PulsesOn for habilitado
     EALLOW;
     EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
     EPwm6Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
@@ -342,10 +347,10 @@ void main(void)
     EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
     EDIS;
 
-    //Informa ao CPU1 que o núcleo 2 já foi carregado
+    //Informa ao CPU1 que o nÃºcleo 2 jÃ¡ foi carregado
     IpcRegs.IPCSET.bit.IPC4 = 1;
 
-    //Habilita as Interrupções. A partir desse ponto as interrupções são chamadas quando requisitadas
+    //Habilita as InterrupÃ§Ãµes. A partir desse ponto as interrupÃ§Ãµes sÃ£o chamadas quando requisitadas
     EINT;  // Enable Global interrupt INTM
     ERTM;  // Enable Global realtime interrupt DBGM
 
@@ -359,7 +364,7 @@ void main(void)
 
     resultsIndex = 0;
 
-    // Inicializa os buffers de aquisição de sinal
+    // Inicializa os buffers de aquisiÃ§Ã£o de sinal
      for(resultsIndex2 = 0; resultsIndex2 < N_data_log; resultsIndex2++)
      {
          Vbat_vec[resultsIndex2] = 0;
@@ -374,6 +379,40 @@ inv_nro_muestras = 1.0/N_amostras;
 //Loop infinito
  while(1)
 {
+
+         // Verifica o numero de bracos ativos
+         if(Nb_int == 3 && Nb_int != Nb_int_ant)
+         {
+             EPwm9Regs.ETSEL.bit.SOCAEN   = 1;
+             EPwm9Regs.TBPHS.bit.TBPHS   = 3704;                     // Phase is 120 degrees
+             EPwm9Regs.TBCTL.bit.PHSDIR  = TB_DOWN;
+
+             EPwm10Regs.ETSEL.bit.SOCAEN = 1;
+             EPwm10Regs.TBPHS.bit.TBPHS  = 3704;
+             EPwm10Regs.TBCTL.bit.PHSDIR = TB_UP;
+
+             Nb_int_ant = Nb_int;
+         }
+
+         else if(Nb_int == 2 && Nb_int != Nb_int_ant)
+         {
+             EPwm9Regs.ETSEL.bit.SOCAEN   = 1;
+             EPwm9Regs.TBPHS.bit.TBPHS   = 5556;                     // Phase is 120 degrees
+             EPwm9Regs.TBCTL.bit.PHSDIR  = TB_DOWN;
+
+             EPwm10Regs.ETSEL.bit.SOCAEN = 0;                   // Disable SOC on A group
+
+             Nb_int_ant = Nb_int;
+         }
+
+         else if(Nb_int == 1 && Nb_int != Nb_int_ant)
+         {
+             EPwm9Regs.ETSEL.bit.SOCAEN   = 0;                   // Disable SOC on A group
+
+             EPwm10Regs.ETSEL.bit.SOCAEN  = 0;                   // Disable SOC on A group
+
+             Nb_int_ant = Nb_int;
+         }
          //Alterna entre modo de carga e descarga do banco de baterias
          if(flag.Bat_Mode == 1)        //Descarga
          {
@@ -387,12 +426,12 @@ inv_nro_muestras = 1.0/N_amostras;
              flag.Bat_Charge    = 1;
 
          }
-        //Carrega a flag relacionada com a entrada digital responsável por verificar se a flag Shutdown do conjunto 1 foi acionada
-         flag.Com_DSP1_read = GpioDataRegs.GPADAT.bit.GPIO25;    //Estado do contator de conexão com a rede
+        //Carrega a flag relacionada com a entrada digital responsÃ¡vel por verificar se a flag Shutdown do conjunto 1 foi acionada
+         flag.Com_DSP1_read = GpioDataRegs.GPADAT.bit.GPIO25;    //Estado do contator de conexÃ£o com a rede
         //
         // These functions are in the F2837xD_EPwm.c file
         //
-        if(flag.BSC_PulsesOn == 1 && flag.Conv_on == 1) ////OBS:Amarrar depois aqui se a pre carga foi concluída
+        if(flag.BSC_PulsesOn == 1 && flag.Conv_on == 1) ////OBS:Amarrar depois aqui se a pre carga foi concluÃ­da
         //if(flag.BSC_PulsesOn == 1)
         {
            //Habilita os controladores PIs
@@ -405,59 +444,142 @@ inv_nro_muestras = 1.0/N_amostras;
            piv_ch.enab   = 1;
 
            //Habilita as rampas
-           I1_Ramp.enab = 1;           //rampa da corrente do braço 1
-           I2_Ramp.enab = 1;           //rampa da corrente do braço 2
-           I3_Ramp.enab = 1;           //rampa da corrente do braço 3
-           VRamp.enab   = 1;            //rampa da tensão para o modo Buck  (Carga)
+           I1_Ramp.enab = 1;           //rampa da corrente do braÃ§o 1
+           I2_Ramp.enab = 1;           //rampa da corrente do braÃ§o 2
+           I3_Ramp.enab = 1;           //rampa da corrente do braÃ§o 3
+           VRamp.enab   = 1;            //rampa da tensÃ£o para o modo Buck  (Carga)
 
 
            if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
            {
-               EPwm6Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM6A on event A, up count
-               EPwm6Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM6A on event A, down count
-               EPwm9Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM9A on event A, up count
-               EPwm9Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM9A on event A, down count
-               EPwm10Regs.AQCTLA.bit.CAU = AQ_CLEAR;       // Clear PWM10A on event A, up count
-               EPwm10Regs.AQCTLA.bit.CAD = AQ_SET;         // Set PWM10A on event A, down count
+               if(Nb_int == 3)
+               {
+                   EPwm6Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM6A on event A, up count
+                   EPwm6Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM6A on event A, down count
+                   EPwm9Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM9A on event A, up count
+                   EPwm9Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM9A on event A, down count
+                   EPwm10Regs.AQCTLA.bit.CAU = AQ_CLEAR;       // Clear PWM10A on event A, up count
+                   EPwm10Regs.AQCTLA.bit.CAD = AQ_SET;         // Set PWM10A on event A, down count
 
-               // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
-               EALLOW;
-               EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
-               EPwm6Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
-               EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
-               EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
-               EPwm9Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
-               EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
-               EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
-               EPwm10Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
-               EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
-               EDIS;
+                   // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                   EALLOW;
+                   EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
+                   EPwm6Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                   EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                   EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
+                   EPwm9Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                   EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                   EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                   EPwm10Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                   EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                   EDIS;
+             }
 
+             if(Nb_int == 2)
+             {
+                 EPwm6Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM6A on event A, up count
+                 EPwm6Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM6A on event A, down count
+                 EPwm9Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM9A on event A, up count
+                 EPwm9Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM9A on event A, down count
 
+                 // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                 EALLOW;
+                 EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
+                 EPwm6Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                 EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                 EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
+                 EPwm9Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                 EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                 EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                 EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output B
+                 EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                 EDIS;
+             }
+
+             if(Nb_int == 1)
+             {
+                EPwm6Regs.AQCTLA.bit.CAU = AQ_CLEAR;        // Clear PWM6A on event A, up count
+                EPwm6Regs.AQCTLA.bit.CAD = AQ_SET;          // Set PWM6A on event A, down count
+
+                // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                EALLOW;
+                EPwm6Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM6
+                EPwm6Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
+                EPwm6Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                EPwm9Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM9
+                EPwm9Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                EPwm9Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                EDIS;
+             }
            }
 
            if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
            {
-               EPwm6Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM6A on event A, up count
-               EPwm6Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM6A on event A, down count
-               EPwm9Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM9A on event A, up count
-               EPwm9Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM9A on event A, down count
-               EPwm10Regs.AQCTLA.bit.CAU = AQ_SET;           // Set PWM10A on event A, up count
-               EPwm10Regs.AQCTLA.bit.CAD = AQ_CLEAR;         // Clear PWM10A on event A, down count
+               if(Nb_int == 3)
+               {
+                   EPwm6Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM6A on event A, up count
+                   EPwm6Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM6A on event A, down count
+                   EPwm9Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM9A on event A, up count
+                   EPwm9Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM9A on event A, down count
+                   EPwm10Regs.AQCTLA.bit.CAU = AQ_SET;           // Set PWM10A on event A, up count
+                   EPwm10Regs.AQCTLA.bit.CAD = AQ_CLEAR;         // Clear PWM10A on event A, down count
 
-               // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
-               EALLOW;
-               EPwm6Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM6
-               EPwm6Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
-               EPwm6Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
-               EPwm9Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM9
-               EPwm9Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
-               EPwm9Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
-               EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
-               EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
-               EPwm10Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
-               EDIS;
+                   // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                   EALLOW;
+                   EPwm6Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM6
+                   EPwm6Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm6Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm9Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM9
+                   EPwm9Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm9Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                   EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                   EPwm10Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
+                   EDIS;
+               }
 
+               if(Nb_int == 2)
+               {
+                   EPwm6Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM6A on event A, up count
+                   EPwm6Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM6A on event A, down count
+                   EPwm9Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM9A on event A, up count
+                   EPwm9Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM9A on event A, down count
+
+                   // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                   EALLOW;
+                   EPwm6Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM6
+                   EPwm6Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm6Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm9Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM9
+                   EPwm9Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm9Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                   EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                   EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                   EDIS;
+               }
+
+               if(Nb_int == 1)
+               {
+                   EPwm6Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM6A on event A, up count
+                   EPwm6Regs.AQCTLA.bit.CAD = AQ_CLEAR;          // Clear PWM6A on event A, down count
+
+                   // Ativa o Tipzone e desabilita os pulsos dos ePWMxA e Desativa o Tipzone e habilita os pulsos dos ePWMxB
+                   EALLOW;
+                   EPwm6Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM6
+                   EPwm6Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm6Regs.TZCTL.bit.TZB = 0x3;    // Do nothing, no action is taken on EPWMxB
+                   EPwm9Regs.TZSEL.bit.OSHT1 = 0x1;  // TZ1 configured for OSHT trip of ePWM9
+                   EPwm9Regs.TZCTL.bit.TZA = 0x2;    // Trip action set to force-low for output A
+                   EPwm9Regs.TZCTL.bit.TZB = 0x2;    // Trip action set to force-low for output B
+                   EPwm10Regs.TZSEL.bit.OSHT1 = 0x1; // TZ1 configured for OSHT trip of ePWM10
+                   EPwm10Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
+                   EPwm10Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
+                   EDIS;
+               }
            }
         }
         else
@@ -472,10 +594,10 @@ inv_nro_muestras = 1.0/N_amostras;
            piv_ch.enab    = 0;
 
            //Desaabilita as rampas
-           I1_Ramp.enab = 0;           //rampa da corrente do braço 1
-           I2_Ramp.enab = 0;           //rampa da corrente do braço 2
-           I3_Ramp.enab = 0;           //rampa da corrente do braço 3
-           VRamp.enab   = 0;            //rampa da tensão para o modo Buck  (Carga)
+           I1_Ramp.enab = 0;           //rampa da corrente do braÃ§o 1
+           I2_Ramp.enab = 0;           //rampa da corrente do braÃ§o 2
+           I3_Ramp.enab = 0;           //rampa da corrente do braÃ§o 3
+           VRamp.enab   = 0;            //rampa da tensÃ£o para o modo Buck  (Carga)
 
            // Ativa o Tipzone dos PWM e desabilita os pulsos
            EALLOW;
@@ -493,7 +615,7 @@ inv_nro_muestras = 1.0/N_amostras;
         }
 
 
-        // Seleção das variáveis que serão plotadas no gráfico do Gui Composer
+        // SeleÃ§Ã£o das variÃ¡veis que serÃ£o plotadas no grÃ¡fico do Gui Composer
         if(flag.real_time_buff == 1)
         {
            switch(selecao_plot)
@@ -542,22 +664,31 @@ inv_nro_muestras = 1.0/N_amostras;
 }
 }
 
-/////////////////////////////////////////////////Interrupções: Controle///////////////////////////////////
+/////////////////////////////////////////////////InterrupÃ§Ãµes: Controle///////////////////////////////////
+//interrupcao do IPC2 para comunicacao com a CPU02
+interrupt void IPC2_INT(void)
+{
+    Recv.recv1 = IpcRegs.IPCRECVADDR;
+    Nb_int = *Recv.recv1;
+    IpcRegs.IPCACK.bit.IPC2 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
 // adca1_isr - Read ADC Buffer in ISR
 interrupt void adca1_isr(void)
 {
     GpioDataRegs.GPCSET.bit.GPIO64 = 1;                            // GPIO para verificar a freq de amostragem
 
-    // Função de Proteção
+    // FunÃ§Ã£o de ProteÃ§Ã£o
     TUPA_protect();
 
-    // Função de parada de funcionamento do sistema
+    // FunÃ§Ã£o de parada de funcionamento do sistema
     TUPA_StopSequence();
 
-    // Função de início de funcionamento do sistema
+    // FunÃ§Ã£o de inÃ­cio de funcionamento do sistema
     TUPA_StartSequence();
 
-    //Modo de Stand by, importante para desconectar este conversor do sistema sem acionar a proteção do inversor e do outro conversor
+    //Modo de Stand by, importante para desconectar este conversor do sistema sem acionar a proteÃ§Ã£o do inversor e do outro conversor
     Stand_by_mode();
 
     //Piscar o LED 3 em uma determinada frequecia
@@ -570,8 +701,8 @@ interrupt void adca1_isr(void)
         Counts.count7 = 0;
     }
 
-    // Update the buffers with the ADCResults. Se flag.real_time_buff for igual a 1, os buffers são atualizados a cada período de amostragem
-    // Caso contrário, os buffers param de ser atualizados e os dados da memória podem ser exportados
+    // Update the buffers with the ADCResults. Se flag.real_time_buff for igual a 1, os buffers sÃ£o atualizados a cada perÃ­odo de amostragem
+    // Caso contrÃ¡rio, os buffers param de ser atualizados e os dados da memÃ³ria podem ser exportados
 
     if(flag.real_time_buff == 1)
     {
@@ -582,41 +713,41 @@ interrupt void adca1_isr(void)
        }
     }
 
-    //Verifica o offset das medições
+    //Verifica o offset das mediÃ§Ãµes
     if(first_scan == 1)
     {
         Offset_Calculation();
     }
     else
     {
-           //Correntes do Braço 1 do Conv cc/cc
+           //Correntes do BraÃ§o 1 do Conv cc/cc
            entradas_dc.I1 = 0.007432592601990*AdcaResultRegs.ADCRESULT0 - 0.007432592601990*channel_offset.CH_1;
 
-           //Tensão do Dc-link
+           //TensÃ£o do Dc-link
            fil2nVdc.x= 0.322*AdccResultRegs.ADCRESULT0 - 754.5;
            TUPA_Second_order_filter(&fil2nVdc);
            entradas_dc.Vdc = fil2nVdc.y;
 
 
-           //Medição 1 da Tensão do banco de baterias
+           //MediÃ§Ã£o 1 da TensÃ£o do banco de baterias
            entradas_dc.Vb1 = 0.4049*AdccResultRegs.ADCRESULT1 - gn;
            fil1nVbat.Un = entradas_dc.Vb1;
-           TUPA_First_order_signals_filter(&fil1nVbat);          //filtra a tensão da bateria
+           TUPA_First_order_signals_filter(&fil1nVbat);          //filtra a tensÃ£o da bateria
 
-//           //Medição 2 da Tensão do banco de baterias
+//           //MediÃ§Ã£o 2 da TensÃ£o do banco de baterias
 //           entradas_dc.Vb2 = 0.401798078111343*AdccResultRegs.ADCRESULT2 - gn2;
 //           fil1nVbat2.Un = entradas_dc.Vb2;
 //           TUPA_First_order_signals_filter(&fil1nVbat2);
 //
-//           //Medição 3 da Tensão do banco de baterias
+//           //MediÃ§Ã£o 3 da TensÃ£o do banco de baterias
 //           entradas_dc.Vb3 = 0.403297325473409*AdccResultRegs.ADCRESULT3 - gn3;
 //           fil1nVbat3.Un = entradas_dc.Vb3;
 //           TUPA_First_order_signals_filter(&fil1nVbat3);
 
-           //Média das medições do banco de baterias
+           //MÃ©dia das mediÃ§Ãµes do banco de baterias
            entradas_dc.Vbt_filt = fil1nVbat.Yn;                //filtrado
-           entradas_dc.Vbt     = entradas_dc.Vb1; //Não filtrado
-           /////////////////////////////////Aquisição dos sinais//////////////////////////////////////////////////////
+           entradas_dc.Vbt     = entradas_dc.Vb1; //NÃ£o filtrado
+           /////////////////////////////////AquisiÃ§Ã£o dos sinais//////////////////////////////////////////////////////
            if(flag.data_logo_init == 1)
            {
                Counts.count9++;
@@ -632,14 +763,14 @@ interrupt void adca1_isr(void)
            }
 
          ///////////////////////////////Rampas////////////////////////////////////////////////
-         TUPA_Ramp(&I1_Ramp);                      //Rampa de referência da corrente para o modo de descarga
-         TUPA_Ramp(&VRamp);                          //Rampa da referência da tensão para o modo de descarga
+         TUPA_Ramp(&I1_Ramp);                      //Rampa de referÃªncia da corrente para o modo de descarga
+         TUPA_Ramp(&VRamp);                          //Rampa da referÃªncia da tensÃ£o para o modo de descarga
 
          //////////////////////////////////controle de Corrente modo Boost (Descarga)//////////////////////////////
          if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
          {
-             //rampa de variação das correntes nos três braços
-             if(I_dis_ref>Ir_dis)  I_dis_ref = Ir_dis;                       //Trava I_dis_ref no valor máximo Ir_dis (Referência máxima de corrente)
+             //rampa de variaÃ§Ã£o das correntes nos trÃªs braÃ§os
+             if(I_dis_ref>Ir_dis)  I_dis_ref = Ir_dis;                       //Trava I_dis_ref no valor mÃ¡ximo Ir_dis (ReferÃªncia mÃ¡xima de corrente)
              I1_Ramp.final = __divf32(I_dis_ref,Nb_int);
              I1_Ramp.in    = __divf32(entradas_dc.I1+entradas_dc.I2+entradas_dc.I3,Nb_int);
              I2_Ramp.final = I1_Ramp.final;
@@ -657,45 +788,46 @@ interrupt void adca1_isr(void)
          }
          else
          {
-             //Reseta as rampas de corrente: Importante para que no próximo ciclo a rampa atue
+             //Reseta as rampas de corrente: Importante para que no prÃ³ximo ciclo a rampa atue
              I1_Ramp.final = 0;
              I2_Ramp.final = 0;
              I3_Ramp.final = 0;
          }
 
-        //////////////////////////////////controle do modo Buck (Carga a Corrente e Tensão Constante)/////////////////////
+        //////////////////////////////////controle do modo Buck (Carga a Corrente e TensÃ£o Constante)/////////////////////
         if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
         {
-            //Referência e rampa da tensão
-            Vref = Vboost*Nbat_series;       //seta a referência de tensão para a tensão de boost
+            //ReferÃªncia e rampa da tensÃ£o
+            Vref = Vboost*Nbat_series;       //seta a referÃªncia de tensÃ£o para a tensÃ£o de boost
             VRamp.final = Vref;
             VRamp.in =  entradas_dc.Vbt_filt;
 
-           // Malha externa - controle da tensão
+           // Malha externa - controle da tensÃ£o
 
             //Controlador PI
             piv_ch.setpoint =  VRamp.atual;
             piv_ch.feedback =  entradas_dc.Vbt_filt;
-            if(I_ch_ref>Ir_ch)  I_ch_ref = Ir_ch;                       //Trava I_dis_ref no valor máximo Ir_ch (Referência máxima de corrente)
+            if(I_ch_ref>Ir_ch)  I_ch_ref = Ir_ch;                       //Trava I_dis_ref no valor mÃ¡ximo Ir_ch (ReferÃªncia mÃ¡xima de corrente)
             piv_ch.outMin   = -10;
             piv_ch.outMax   = __divf32(I_ch_ref,3);
             TUPA_Pifunc(&piv_ch);
 
             //setpoint para a malha interna
-            pi_I1_ch.setpoint = piv_ch.output;
+            //pi_I1_ch.setpoint = piv_ch.output;
+            pi_I1_ch.setpoint = __divf32(I_ch_ref,Nb_int);  // During communication
 
             //Malha interna - controle de corrente
 
             //Controle de Corrente (PI)
             pi_I1_ch.feedback = -entradas_dc.I1;
             TUPA_Pifunc(&pi_I1_ch);
-            //referência para o PWM
+            //referÃªncia para o PWM
             pwm_dc.din = pi_I1_ch.output;
 
         }
         else
         {
-            //Reseta a rampa de tensão: Importante para que no próximo ciclo a rampa atue
+            //Reseta a rampa de tensÃ£o: Importante para que no prÃ³ximo ciclo a rampa atue
             VRamp.final = 0;
         }
 
@@ -707,9 +839,9 @@ interrupt void adca1_isr(void)
         //EPwm6Regs.CMPA.bit.CMPA = (50000000/PWM_FREQ)*0.5;
     }
 
-   //Limpa a Flag da interrupção. Se não limpar, a interrupção não é chamada novamente
+   //Limpa a Flag da interrupÃ§Ã£o. Se nÃ£o limpar, a interrupÃ§Ã£o nÃ£o Ã© chamada novamente
    AdcaRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;  //ADC Interrupt 1 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
-   PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Limpa a flag da interrupção da correspondente linha. Se não fazer isso, uma nova interrupção não é possível pq essa flag não é limpa
+   PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; //Limpa a flag da interrupÃ§Ã£o da correspondente linha. Se nÃ£o fazer isso, uma nova interrupÃ§Ã£o nÃ£o Ã© possÃ­vel pq essa flag nÃ£o Ã© limpa
 }
 
 // adca2_isr - Read ADC Buffer in ISR
@@ -717,21 +849,21 @@ interrupt void adca2_isr(void)
 {
     GpioDataRegs.GPCSET.bit.GPIO66 = 1;                            // GPIO para verificar a freq
 
-    // Função de Proteção
+    // FunÃ§Ã£o de ProteÃ§Ã£o
     TUPA_protect();
 
-    //Verifica o offset das medições
+    //Verifica o offset das mediÃ§Ãµes
     if(first_scan2 == 1)
     {
         Offset_Calculation();
     }
     else
     {
-       //Corrente do Braço 2 do Conv cc/cc
+       //Corrente do BraÃ§o 2 do Conv cc/cc
         entradas_dc.I2 =  0.007443243187925*AdcaResultRegs.ADCRESULT1 -  0.007443243187925*channel_offset.CH_2;
 
         ///////////////////////////////Rampas////////////////////////////////////////////////
-        TUPA_Ramp(&I2_Ramp);                      //Rampa de referência da corrente para o modo de descarga
+        TUPA_Ramp(&I2_Ramp);                      //Rampa de referÃªncia da corrente para o modo de descarga
 
         //////////////////////////////////controle de Corrente modo Boost (Descarga)/////////////////////
         if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
@@ -750,13 +882,13 @@ interrupt void adca2_isr(void)
         if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
         {
 
-            // Referência de corrente para equalização
+            // ReferÃªncia de corrente para equalizaÃ§Ã£o
             pi_I2_ch.setpoint = pi_I1_ch.setpoint;    //setpoint para a malha interna para balancear as correntes
 
             //Controle de Corrente
             pi_I2_ch.feedback = -entradas_dc.I2;
             TUPA_Pifunc(&pi_I2_ch);
-            //referência para o PWM
+            //referÃªncia para o PWM
             pwm_dc2.din = pi_I2_ch.output;
         }
 
@@ -767,9 +899,9 @@ interrupt void adca2_isr(void)
         //EPwm9Regs.CMPA.bit.CMPA = (50000000/PWM_FREQ)*0.5;
     }
 
-    //Limpa a Flag da interrupção. Se não limpar, a interrupção não é chamada novamente
+    //Limpa a Flag da interrupÃ§Ã£o. Se nÃ£o limpar, a interrupÃ§Ã£o nÃ£o Ã© chamada novamente
     AdcaRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;  //ADC Interrupt 2 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP10; //Limpa a flag da interrupção da correspondente linha. Se não fazer isso, uma nova interrupção não é possível pq essa flag não é limpa
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP10; //Limpa a flag da interrupÃ§Ã£o da correspondente linha. Se nÃ£o fazer isso, uma nova interrupÃ§Ã£o nÃ£o Ã© possÃ­vel pq essa flag nÃ£o Ã© limpa
 }
 
 // adca3_isr - Read ADC Buffer in ISR
@@ -777,21 +909,21 @@ interrupt void adca3_isr(void)
 {
     GpioDataRegs.GPCSET.bit.GPIO68 = 1;                            // GPIO para verificar a freq
 
-    // Função de Proteção
+    // FunÃ§Ã£o de ProteÃ§Ã£o
     TUPA_protect();
 
-    //Verifica o offset das medições
+    //Verifica o offset das mediÃ§Ãµes
     if(first_scan3 == 1)
     {
         Offset_Calculation();
     }
     else
     {
-        //Corrente do Braço 2 do Conv cc/cc
+        //Corrente do BraÃ§o 2 do Conv cc/cc
          entradas_dc.I3 =  0.007305787609146*AdcaResultRegs.ADCRESULT2 - 0.007305787609146*channel_offset.CH_3;
 
          ///////////////////////////////Rampas////////////////////////////////////////////////
-         TUPA_Ramp(&I3_Ramp);                      //Rampa de referência da corrente
+         TUPA_Ramp(&I3_Ramp);                      //Rampa de referÃªncia da corrente
 
          //////////////////////////////////controle de Corrente modo Boost (Descarga)/////////////////////
          if(flag.Bat_Discharge == 1 && flag.Bat_Charge == 0)
@@ -808,13 +940,13 @@ interrupt void adca3_isr(void)
          //////////////////////////////////controle de Corrente modo Buck (Carga a Corrente Constante)/////////////////////
          if(flag.Bat_Charge == 1 && flag.Bat_Discharge == 0)
          {
-             // Referência de corrente para equalização
+             // ReferÃªncia de corrente para equalizaÃ§Ã£o
              pi_I3_ch.setpoint = pi_I1_ch.setpoint;    //setpoint para a malha interna para balancear as correntes
 
              //Controle de Corrente
              pi_I3_ch.feedback = -entradas_dc.I3;
              TUPA_Pifunc(&pi_I3_ch);
-             //referência para o PWM
+             //referÃªncia para o PWM
              pwm_dc3.din = pi_I3_ch.output;
          }
 
@@ -825,13 +957,13 @@ interrupt void adca3_isr(void)
          //EPwm10Regs.CMPA.bit.CMPA = (50000000/PWM_FREQ)*0.5;
     }
 
-    //Limpa a Flag da interrupção. Se não limpar, a interrupção não é chamada novamente
+    //Limpa a Flag da interrupÃ§Ã£o. Se nÃ£o limpar, a interrupÃ§Ã£o nÃ£o Ã© chamada novamente
     AdcaRegs.ADCINTFLGCLR.bit.ADCINT3 = 1;  //ADC Interrupt 3 Flag. Reading these flags indicates if the associated ADCINT pulse was generated since the last clear.
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP10; //Limpa a flag da interrupção da correspondente linha. Se não fazer isso, uma nova interrupção não é possível pq essa flag não é limpa
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP10; //Limpa a flag da interrupÃ§Ã£o da correspondente linha. Se nÃ£o fazer isso, uma nova interrupÃ§Ã£o nÃ£o Ã© possÃ­vel pq essa flag nÃ£o Ã© limpa
 }
 
-//////////////////////////////////////////////////Funções de Controle//////////////////////////////////////
-// Função Rampa
+//////////////////////////////////////////////////FunÃ§Ãµes de Controle//////////////////////////////////////
+// FunÃ§Ã£o Rampa
 void TUPA_Ramp(Ramp *rmp)
 {
     if(rmp->enab)
@@ -942,11 +1074,11 @@ void TUPA_pwm(sPWM *svp, Uint16 fpwm_cnt)
 
 }
 
-/////////////////////////////////////Funções de Sistema//////////////////////////////////////////
-// Função de Proteção do Sistema
+/////////////////////////////////////FunÃ§Ãµes de Sistema//////////////////////////////////////////
+// FunÃ§Ã£o de ProteÃ§Ã£o do Sistema
 void TUPA_protect(void)
 {
-    // Proteção de sobrecorrente no Conversor cc/cc
+    // ProteÃ§Ã£o de sobrecorrente no Conversor cc/cc
     //Descarga
    if (flag.Bat_Discharge == 1)
    {
@@ -989,7 +1121,7 @@ void TUPA_protect(void)
       }
   }
 
-   // Proteção de sobretensão na bateria
+   // ProteÃ§Ã£o de sobretensÃ£o na bateria
    if(entradas_dc.Vbt_filt > BAT_OVERVOLTAGE_LIMIT)
    {
        Counts.count8++;
@@ -1007,7 +1139,7 @@ void TUPA_protect(void)
    }
 
    /*
-   // Proteção de subtensão na bateria
+   // ProteÃ§Ã£o de subtensÃ£o na bateria
    if(entradas_dc.Vbt_mav < BAT_UNDERVOLTAGE_LIMIT && flag.Shutdown_Conv == 1)
    {
          Counts.count10++;
@@ -1024,7 +1156,7 @@ void TUPA_protect(void)
    }
 */
 
-//   // Proteção de sobretensão no dc-link
+//   // ProteÃ§Ã£o de sobretensÃ£o no dc-link
 //   if(entradas_dc.Vdc > DC_OVERVOLTAGE_LIMIT)
 //   {
 //       Counts.count4++;
@@ -1041,23 +1173,23 @@ void TUPA_protect(void)
 //       Counts.count4 = 0;
 //   }
 
-   //Verifica se a flag Group_com está indicando que a proteção foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
+   //Verifica se a flag Group_com estÃ¡ indicando que a proteÃ§Ã£o foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
    if(flag.Com_DSP1_read == 1 && flag.AbleToStart == 1) flag.Shutdown_Conv = 1;
 
 }
 
-// Função de início de funcionamento do sistema
+// FunÃ§Ã£o de inÃ­cio de funcionamento do sistema
 void TUPA_StartSequence(void)
 {
-    GpioDataRegs.GPACLEAR.bit.GPIO24 = 1;           // Limpa a flag que informa para a DSP02 que a proteção nesse conjunto foi acionada
+    GpioDataRegs.GPACLEAR.bit.GPIO24 = 1;           // Limpa a flag que informa para a DSP02 que a proteÃ§Ã£o nesse conjunto foi acionada
 
-    //Verifica se a flag Shutdown está acionado
+    //Verifica se a flag Shutdown estÃ¡ acionado
     ////OBS: (Amarrar depois dos testes)
      if(flag.Shutdown_Conv == 0)
      {
          if(flag.Com_DSP1_read == 0) flag.AbleToStart = 1;
-         //Verifica se a flag do interleaved está habilitada. Fecha contatores entre baterias e Conversor cc/cc
-         //OBS:Após conectar o conv no dc-link, colocar que esses contatores só podem ser acionados se   flag.precharge_ok está ok.
+         //Verifica se a flag do interleaved estÃ¡ habilitada. Fecha contatores entre baterias e Conversor cc/cc
+         //OBS:ApÃ³s conectar o conv no dc-link, colocar que esses contatores sÃ³ podem ser acionados se   flag.precharge_ok estÃ¡ ok.
           // Inicia o Start do sistema
           if(flag.Conv_on == 1)
           {
@@ -1068,10 +1200,10 @@ void TUPA_StartSequence(void)
      }
 }
 
-// Função de parada de funcionamento do sistema
+// FunÃ§Ã£o de parada de funcionamento do sistema
 void TUPA_StopSequence(void)
 {
-    //Verifica se a flag Shutdown_conv está acionado ou se a Shutdown da CPU1 está acionada (IPC6) e interrompe o chaveamento e abre os contatores
+    //Verifica se a flag Shutdown_conv estÃ¡ acionado ou se a Shutdown da CPU1 estÃ¡ acionada (IPC6) e interrompe o chaveamento e abre os contatores
      if(flag.Shutdown_Conv == 1)
      {
          flag.AbleToStart = 0;
@@ -1083,7 +1215,7 @@ void TUPA_StopSequence(void)
          GpioDataRegs.GPBCLEAR.bit.GPIO56 =  1;       //Abre contator dc 2
          GpioDataRegs.GPBCLEAR.bit.GPIO55 =  1;       //Abre contator dc 3
 
-         GpioDataRegs.GPASET.bit.GPIO24 = 1;           // Informa para a DSP02 que a proteção nesse conjunto foi acionada
+         GpioDataRegs.GPASET.bit.GPIO24 = 1;           // Informa para a DSP02 que a proteÃ§Ã£o nesse conjunto foi acionada
 
      }
 
@@ -1092,7 +1224,7 @@ void TUPA_StopSequence(void)
 // Modo de Standy by do conversor
 void Stand_by_mode(void)
 {
-    //Verifica se a flag Shutdown_conv está acionado ou se a Shutdown da CPU1 está acionada (IPC6) e interrompe o chaveamento e abre os contatores
+    //Verifica se a flag Shutdown_conv estÃ¡ acionado ou se a Shutdown da CPU1 estÃ¡ acionada (IPC6) e interrompe o chaveamento e abre os contatores
      if(flag.Stand_by == 1)
      {
          flag.Conv_on = 0;                             // Reseta o valor de flag.Conv_on
@@ -1106,10 +1238,10 @@ void Stand_by_mode(void)
 
 }
 
-// Calculo do offset das medições do conv 1
+// Calculo do offset das mediÃ§Ãµes do conv 1
 void Offset_Calculation(void)
 {
-    if(AdcaRegs.ADCINTFLG.bit.ADCINT1 == 1) // Veirifica se a interrupção 1 foi setada
+    if(AdcaRegs.ADCINTFLG.bit.ADCINT1 == 1) // Veirifica se a interrupÃ§Ã£o 1 foi setada
     {
         // Calcula o offset
         if(Counts.count1 < N_amostras)
@@ -1126,7 +1258,7 @@ void Offset_Calculation(void)
         }
     }
 
-    if(AdcaRegs.ADCINTFLG.bit.ADCINT2 == 1) // Veirifica se a interrupção 2 foi setada
+    if(AdcaRegs.ADCINTFLG.bit.ADCINT2 == 1) // Veirifica se a interrupÃ§Ã£o 2 foi setada
     {
         // Calcula o offset
         if(Counts.count5 < N_amostras)
@@ -1144,7 +1276,7 @@ void Offset_Calculation(void)
 
     }
 
-    if(AdcaRegs.ADCINTFLG.bit.ADCINT3 == 1) // Veirifica se a interrupção 3 foi setada
+    if(AdcaRegs.ADCINTFLG.bit.ADCINT3 == 1) // Veirifica se a interrupÃ§Ã£o 3 foi setada
     {
         // Calcula o offset
         if(Counts.count6 < N_amostras)

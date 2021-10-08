@@ -102,7 +102,7 @@ void ConfigureEPWM(void)
     EPwm6Regs.ETSEL.bit.SOCASEL   = ET_CTR_ZERO;         // These bits determine when a EPWMxSOCA pulse will be generated.
     EPwm6Regs.ETPS.bit.SOCAPRD    = 1;                    // Generate pulse on 1st event
     EPwm6Regs.TBCTL.bit.CTRMODE   = TB_COUNT_UPDOWN;     // freeze counter
-    EPwm6Regs.TBPRD = 50000000/PWM_FREQ;                   // Set period of PWM Fclock/(2*Fpwm)  F_clock = 100MHz
+    EPwm6Regs.TBPRD = 5556;                   // Set period of PWM Fclock/(2*Fpwm)  F_clock = 100MHz
     EPwm6Regs.TBPHS.bit.TBPHS     = 0;                     // Phase is 0
     EPwm6Regs.TBCTL.bit.PHSEN     = TB_ENABLE;             // Disable phase loading
     EPwm6Regs.TBCTL.bit.SYNCOSEL  = TB_SYNC_IN;            // sync with the EPWM6
@@ -131,8 +131,8 @@ void ConfigureEPWM(void)
     EPwm9Regs.ETSEL.bit.SOCASEL   = ET_CTR_ZERO;         // These bits determine when a EPWMxSOCA pulse will be generated.
     EPwm9Regs.ETPS.bit.SOCAPRD    = 1;                    // Generate pulse on 1st event
     EPwm9Regs.TBCTL.bit.CTRMODE   = TB_COUNT_UPDOWN;     // freeze counter
-    EPwm9Regs.TBPRD = 50000000/PWM_FREQ;                         // Set period of PWM Fclock/(2*Fpwm)  F_clock = 100MHz
-    EPwm9Regs.TBPHS.bit.TBPHS     = (EPwm9Regs.TBPRD)*2/3;                     // Phase is 120 degrees
+    EPwm9Regs.TBPRD = 5556;                         // Set period of PWM Fclock/(2*Fpwm)  F_clock = 100MHz
+    EPwm9Regs.TBPHS.bit.TBPHS     = 3704;                     // Phase is 120 degrees
     EPwm9Regs.TBCTL.bit.PHSDIR    = TB_DOWN;
     EPwm9Regs.TBCTL.bit.PHSEN     = TB_ENABLE;             // Disable phase loading
     EPwm9Regs.TBCTL.bit.SYNCOSEL  = TB_SYNC_IN;            // sync with the EPWM6
@@ -160,8 +160,8 @@ void ConfigureEPWM(void)
     EPwm10Regs.ETSEL.bit.SOCASEL   = ET_CTR_ZERO;         // These bits determine when a EPWMxSOCA pulse will be generated.
     EPwm10Regs.ETPS.bit.SOCAPRD    = 1;                    // Generate pulse on 1st event
     EPwm10Regs.TBCTL.bit.CTRMODE   = TB_COUNT_UPDOWN;     // freeze counter
-    EPwm10Regs.TBPRD = 50000000/PWM_FREQ;                         // Set period of PWM Fclock/(2*Fpwm)  F_clock = 100MHz
-    EPwm10Regs.TBPHS.bit.TBPHS     = (EPwm10Regs.TBPRD)*2/3;
+    EPwm10Regs.TBPRD = 5556;                         // Set period of PWM Fclock/(2*Fpwm)  F_clock = 100MHz
+    EPwm10Regs.TBPHS.bit.TBPHS     = 3704;
     EPwm10Regs.TBCTL.bit.PHSDIR    = TB_UP;
     EPwm10Regs.TBCTL.bit.PHSEN     = TB_ENABLE;             // Disable phase loading
     EPwm10Regs.TBCTL.bit.SYNCOSEL  = TB_SYNC_IN;            // sync with the EPWM6

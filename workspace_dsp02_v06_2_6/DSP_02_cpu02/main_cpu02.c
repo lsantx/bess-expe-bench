@@ -407,11 +407,11 @@ inv_nro_muestras = 1.0/N_amostras;
          if(Nb_int == 3 && Nb_int != Nb_int_ant)
          {
              EPwm9Regs.ETSEL.bit.SOCAEN   = 1;
-             EPwm9Regs.TBPHS.bit.TBPHS   = (EPwm9Regs.TBPRD)*2/3;                     // Phase is 120 degrees
+             EPwm9Regs.TBPHS.bit.TBPHS   = 3704;                     // Phase is 120 degrees
              EPwm9Regs.TBCTL.bit.PHSDIR  = TB_DOWN;
 
              EPwm10Regs.ETSEL.bit.SOCAEN = 1;
-             EPwm10Regs.TBPHS.bit.TBPHS  = (EPwm10Regs.TBPRD)*2/3;
+             EPwm10Regs.TBPHS.bit.TBPHS  = 3704;
              EPwm10Regs.TBCTL.bit.PHSDIR = TB_UP;
 
              Nb_int_ant = Nb_int;
@@ -420,7 +420,7 @@ inv_nro_muestras = 1.0/N_amostras;
          else if(Nb_int == 2 && Nb_int != Nb_int_ant)
          {
              EPwm9Regs.ETSEL.bit.SOCAEN   = 1;
-             EPwm9Regs.TBPHS.bit.TBPHS   = (EPwm9Regs.TBPRD);                     // Phase is 120 degrees
+             EPwm9Regs.TBPHS.bit.TBPHS   = 5556;                     // Phase is 120 degrees
              EPwm9Regs.TBCTL.bit.PHSDIR  = TB_DOWN;
 
              EPwm10Regs.ETSEL.bit.SOCAEN = 0;                   // Disable SOC on A group
