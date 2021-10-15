@@ -251,22 +251,21 @@ sPR PR_Ib_11 = PR_I_11_DEFAULTS;
 
 //Ramp
 typedef struct{
-int   enab;
-float final;
-float final_ant;
-float atual;
-float in;
-float delta;
-int   flag;
-int   flag2;
-float range;
-float inc;
-} Ramp;
+    float t1;
+    float t1_ant;
+    float y;
+    float y_ant;
+    float uin;
+    float rate;
+    float Ts;
+    float rising;
+    float falling;
+} sRamp;
+#define PRamp_default {0,0,0,0,0,0,TSAMPLE,9000,-9000}
+#define VRamp_default {0,0,0,0,0,0,TSAMPLE,50,-50}
+sRamp QRamp = PRamp_default;
+sRamp VRamp = VRamp_default;
 
-#define VRamp_default {0,0,0,0,0,0,0,0,0.1,0.005}
-#define QRamp_default {0,0,0,0,0,0,0,0,0.1,0.06}
-Ramp VRamp = VRamp_default;
-Ramp QRamp = QRamp_default;
 
 typedef struct{
     int CH_1;
@@ -355,7 +354,7 @@ void TUPA_StopSequence(void);
 void Offset_Calculation(void);
 void TUPA_First_order_signals_filter(sFilter1st *);
 void TUPA_PR(sPR *);
-void TUPA_Ramp(Ramp *);
+void TUPA_Ramp(sRamp *);
 void TUPA_Second_order_filter(sFilter2nd *);
 void TxBufferAqu(Ssci_mesg *);
 float RxBufferAqu(Ssci *, Ssci_mesg *);
@@ -611,9 +610,6 @@ void main(void)
            PR_Ib_5.enab = 1;
            PR_Ib_7.enab = 1;
            PR_Ib_11.enab = 1;
-           //Enable Ramps
-           VRamp.enab = 1;
-           QRamp.enab = 1;
 
            // Disable PWM Tipzone and enables pulses
            EALLOW;                // Enable EALLOW protected register access
@@ -627,6 +623,13 @@ void main(void)
            EPwm5Regs.TZCTL.bit.TZA = 0x3;   // Do nothing, no action is taken on EPWMxA
            EPwm5Regs.TZCTL.bit.TZB = 0x3;   // Do nothing, no action is taken on EPWMxB
            EDIS;                  // Disable EALLOW protected register access
+
+           //Limita a refer�ncia de reativo
+           if(Q_ref>5000) Q_ref = 5000;
+           if(Q_ref<-5000) Q_ref = -5000;
+
+           //rampa de variacao da referencia de reativo
+           QRamp.uin = Q_ref;
 
         }
         else
@@ -643,9 +646,6 @@ void main(void)
            PR_Ib_5.enab = 0;
            PR_Ib_7.enab = 0;
            PR_Ib_11.enab = 0;
-           //Disable ramps
-           VRamp.enab = 0;
-           QRamp.enab = 0;
 
            // Enable PWM Tipzone and disables pulses
            EALLOW;
@@ -659,6 +659,13 @@ void main(void)
            EPwm5Regs.TZCTL.bit.TZA = 0x2;   // Trip action set to force-low for output A
            EPwm5Regs.TZCTL.bit.TZB = 0x2;   // Trip action set to force-low for output B
            EDIS;
+
+           //Reseta a rampa da referencia do controle de reativo
+           QRamp.uin = fil2nQ.y;
+           QRamp.y = fil2nQ.y;
+
+           VRamp.y = Filt_freq_Vdc.Yn;
+           VRamp.uin = Filt_freq_Vdc.Yn;
 
         }
 
@@ -840,9 +847,12 @@ interrupt void adcb1_isr(void)
        if (flag.case_study == 1)
        {
            flag.data_logo_init = 1;
-           Q_ref = 3000;
 
-           Counts.count11++;
+           if(resultsIndex2 < 1000) Q_ref = 3000;
+           else if(resultsIndex2 >= 1000 && resultsIndex2 < 1800) Q_ref = 1500;
+           else if(resultsIndex2 >= 1800) Q_ref = 0;
+//           Counts.count11++;
+
            if(resultsIndex2 > (N_data_log - 1))
            {
                flag.case_study = 0;
@@ -909,17 +919,16 @@ interrupt void adcb1_isr(void)
        TUPA_abc2alfabeta(&Iabc,&Ialfabeta);            // transformada abc para alfa-beta da corrente do inversor
 
        ////////////////////////////////Controle da tens�o do dc-link (malha externa)///////////////////////////////
+       TUPA_Ramp(&VRamp);                                      //Rampa de referencia de tensao para o dc-link
+
        //Limita a refer�ncia de tens�o
        if(Vdc_ref>580) Vdc_ref = 580;
 
-       //rampa da refer�ncia do Vdc
-       VRamp.final = Vdc_ref;
-       VRamp.in = entradas_red.Vdc;
-
-       TUPA_Ramp(&VRamp);                                      //Rampa de refer�ncia de tens�o para o dc-link
+       //rampa da referencia do controle do Vdc
+       VRamp.uin = Vdc_ref;
 
        //controle PI
-       pi_Vdc.setpoint = VRamp.atual*VRamp.atual;
+       pi_Vdc.setpoint = VRamp.y*VRamp.y;
        pi_Vdc.feedback = entradas_red.Vdc*entradas_red.Vdc;
        TUPA_Pifunc(&pi_Vdc);                                   // Controle PI
 
@@ -934,21 +943,14 @@ interrupt void adcb1_isr(void)
        TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
        TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisi��o por enquanto
 
-       //Limita a refer�ncia de reativo
-       if(Q_ref>5000) Q_ref = 5000;
-
-       //rampa de varia��o da refer�ncia de reativo
-       QRamp.final = Q_ref;
-       QRamp.in    = fil2nQ.y;
-
-       TUPA_Ramp(&QRamp);                      //Rampa de refer�ncia da pot�ncia reativa
-
-       // Controle
-       pi_Q.setpoint = QRamp.atual;
-       pi_Q.feedback = fil2nQ.y;
+       // Controle de Reativo
+       pi_Q.setpoint = QRamp.y;
+       pi_Q.feedback = Qm;
        TUPA_Pifunc(&pi_Q);                     // Controle PI
 
        pi_Q.output = pi_Q.output + pi_Q.setpoint;
+
+       TUPA_Ramp(&QRamp);                      //Rampa de referencia da potencia reativa
 
        ////////////////////////////////Controle de Corrente (Malha interna)///////////////////////////////
        //Sepoint do controle de corrente (Sem malha externa)
@@ -1322,50 +1324,23 @@ void TUPA_pwm(sABC *p_ABC, sSvm *svp, float Vdc, Uint16 fpwm_cnt)
 
 }
 
-// Ramp function
-void TUPA_Ramp(Ramp *rmp)
+// Rampa
+void TUPA_Ramp(sRamp *rmp)
 {
-    if(rmp->enab)
-    {
-        if(rmp->final != rmp->final_ant)
-        {
-            rmp->flag = 0;
-            rmp->flag2 = 1;
-        }
+  if(rmp->uin != rmp->y) rmp->t1 = rmp->t1 + rmp->Ts;
 
-        rmp->final_ant = rmp->final;
+  if(rmp->t1 != rmp->t1_ant)
+  {
+    rmp->rate = (rmp->uin - rmp->y_ant)/(rmp->t1 - rmp->t1_ant);
+  }
+  else rmp->rate = 0;
 
-        if(rmp->flag == 0)
-        {
-            rmp->atual = rmp->in;
-            rmp->flag = 1;
-        }
+  if(rmp->rate > rmp->rising) rmp->y = (rmp->t1 - rmp->t1_ant)*rmp->rising + rmp->y_ant;
+  else if(rmp->rate < rmp->falling) rmp->y = (rmp->t1 - rmp->t1_ant)*rmp->falling + rmp->y_ant;
+  else rmp->y = rmp->uin;
 
-        rmp->delta = rmp->final - rmp->atual;
-
-        if(rmp->flag2 == 1)
-        {
-            if(rmp->delta > 0)
-            {
-                rmp->atual += rmp->inc;
-                if(rmp->delta<=rmp->range)
-                {
-                    rmp->atual = rmp->final;
-                    rmp->flag2 = 0;
-                }
-            }
-            else if(rmp->delta < 0)
-            {
-                rmp->atual -= rmp->inc;
-                if(rmp->delta>=rmp->range)
-                {
-                    rmp->atual = rmp->final;
-                    rmp->flag2 = 0;
-                }
-
-            }
-        }
-    }
+  rmp->t1_ant = rmp->t1;
+  rmp->y_ant = rmp->y;
 }
 
 // Tx funtion

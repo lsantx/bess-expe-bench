@@ -132,7 +132,7 @@ grid
 clear; close all; clc;
 
 s = tf('s');
-fc = 2;
+fc = 50;
 wc = 2*pi*fc;
 
 Ki = wc

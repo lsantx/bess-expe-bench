@@ -24,7 +24,7 @@
 #define RESULTS_BUFFER_SIZE  2*(Nsample*PWM_FREQ/60)        //Ciclos*(Freq. de amostragem)/(freq.fundamental)
 
 // Tamanho do Buffer de aquisi��o de dados e limite de contagem
-#define N_data_log  2200               // Aquisi��o de 2.2000
+#define N_data_log  2300               // Aquisi��o de 2.2000
 //#define COUNT_LIM_LOG  270000         //Aquisi��o a cada 30s
 #define COUNT_LIM_LOG  9           //Aquisi��o a cada 2.2000
 
@@ -41,7 +41,7 @@
 #define PI_Vdc_OUTMIN    -50000
 
 // Ganhos do controlador PI do Reativo
-#define PI_Q_KI         12.5664
+#define PI_Q_KI         57
 #define PI_Q_OUTMAX     50000
 #define PI_Q_OUTMIN    -50000
 
