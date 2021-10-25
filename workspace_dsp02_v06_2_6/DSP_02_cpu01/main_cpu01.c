@@ -266,8 +266,9 @@ typedef struct{
     float falling;
 } sRamp;
 #define PRamp_default {0,0,0,0,0,0,TSAMPLE,300,-300}
+#define QRamp_default {0,0,0,0,0,0,TSAMPLE,9000,-9000}
 #define VRamp_default {0,0,0,0,0,0,TSAMPLE,50,-50}
-sRamp QRamp = PRamp_default;
+sRamp QRamp = QRamp_default;
 sRamp PRamp = PRamp_default;
 sRamp VRamp = VRamp_default;
 
@@ -789,7 +790,6 @@ interrupt void adcb1_isr(void)
 //        IpcRegs.IPCSENDADDR = (Uint32) &sci_msgA.pref;
 //        IpcRegs.IPCSET.bit.IPC3 = 1;
 
-        Q_ref = sci_msgA.qref;
         pout = pi_P.setpoint;
         qout = flag.BSC_PulsesOn;
 
@@ -867,9 +867,12 @@ interrupt void adcb1_isr(void)
        if (flag.case_study == 1)
        {
            flag.data_logo_init = 1;
-           Q_ref = 3000;
 
-           Counts.count11++;
+           if(resultsIndex2 < 1000) Q_ref = 3000;
+           else if(resultsIndex2 >= 1000 && resultsIndex2 < 1800) Q_ref = 1500;
+           else if(resultsIndex2 >= 1800) Q_ref = 0;
+           //           Counts.count11++;
+
            if(resultsIndex2 > (N_data_log - 1))
            {
                flag.case_study = 0;
@@ -877,7 +880,7 @@ interrupt void adcb1_isr(void)
            }
        }
 
-       /////////////////////////////////Aquisicao dos sinais//////////////////////////////////////////////////////
+       /////////////////////////////////Aquisi��o dos sinais//////////////////////////////////////////////////////
 
        if(flag.data_logo_init == 1)
          {
