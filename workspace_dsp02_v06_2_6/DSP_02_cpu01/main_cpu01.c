@@ -868,9 +868,9 @@ interrupt void adcb1_isr(void)
        {
            flag.data_logo_init = 1;
 
-           if(resultsIndex2 < 1000) Q_ref = 3000;
+           if(resultsIndex2 < 1000) Q_ref = 0;
            else if(resultsIndex2 >= 1000 && resultsIndex2 < 1800) Q_ref = 1500;
-           else if(resultsIndex2 >= 1800) Q_ref = 0;
+           else if(resultsIndex2 >= 1800) Q_ref = 3000;
            //           Counts.count11++;
 
            if(resultsIndex2 > (N_data_log - 1))
@@ -993,7 +993,7 @@ interrupt void adcb1_isr(void)
 
        // Controle
        pi_Q.setpoint = QRamp.y;
-       pi_Q.feedback = fil2nQ.y;
+       pi_Q.feedback = Qm;
        TUPA_Pifunc(&pi_Q);                     // Controle PI
 
        pi_Q.output = pi_Q.output + pi_Q.setpoint;
