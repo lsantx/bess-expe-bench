@@ -391,6 +391,8 @@ float  Vdc_ref = 480;
 float  Q_ref   = 0;
 float  Qm      = 0;
 float  Pm      = 0;
+float Q_control = 0;
+float P_control = 0;
 
 int selecao_plot = 0;
 Uint16 fault = FAULT_OK;
@@ -948,8 +950,6 @@ interrupt void adcb1_isr(void)
        pi_Q.feedback = Qm;
        TUPA_Pifunc(&pi_Q);                     // Controle PI
 
-       pi_Q.output = pi_Q.output + pi_Q.setpoint;
-
        TUPA_Ramp(&QRamp);                      //Rampa de referencia da potencia reativa
 
        ////////////////////////////////Controle de Corrente (Malha interna)///////////////////////////////
@@ -957,9 +957,14 @@ interrupt void adcb1_isr(void)
        //PR_Ia_fund.setpoint = Iref*pll_grid.costh;
        //PR_Ib_fund.setpoint = Iref*pll_grid.sinth;
 
+       Q_control = QRamp.y / 1.5;
+       //Q_control = (pi_Q.output + pi_Q.setpoint) / 1.5;
+
+       P_control =  -pi_Vdc.output / 1.5;
+
        // Sepoint do controle de corrente - Teoria da pot�ncia instant�nea
-       PR_Ia_fund.setpoint = __divf32((pll_grid.alfa*(-pi_Vdc.output) + pi_Q.output*pll_grid.beta),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
-       PR_Ib_fund.setpoint = __divf32((pll_grid.beta*(-pi_Vdc.output) - pi_Q.output*pll_grid.alfa),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
+       PR_Ia_fund.setpoint = __divf32((pll_grid.alfa*(P_control) + Q_control*pll_grid.beta),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
+       PR_Ib_fund.setpoint = __divf32((pll_grid.beta*(P_control) - Q_control*pll_grid.alfa),(pll_grid.alfa*pll_grid.alfa + pll_grid.beta*pll_grid.beta + 0.001));
 
        // satura��o da corrente
        if(PR_Ia_fund.setpoint>Ir)  PR_Ia_fund.setpoint =  Ir;
