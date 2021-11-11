@@ -705,8 +705,8 @@ interrupt void adca1_isr(void)
          {
              if (flag_zero == true)
              {
-                 I_ch_ref = 0;
-                 I_dis_ref = 0;
+                 I_ch_ref = 5;
+                 I_dis_ref = 5;
                  flag_zero = false;
              }
          }

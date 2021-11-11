@@ -49,7 +49,7 @@
 #define PRECHARGE_LIMIT        30/(TSAMPLE)      //6 segundos
 
 //Ganhos controladores PR
-#define PR_I_GRID_KP    5       //11
+#define PR_I_GRID_KP    11       //11
 #define PR_I_GRID_KI    1000
 #define Ir              36
 

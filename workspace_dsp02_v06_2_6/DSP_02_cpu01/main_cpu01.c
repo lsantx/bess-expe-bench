@@ -165,6 +165,7 @@ typedef struct {
 
 sFilter1st Filt_freq_pll = FILTER_DEFAULTS;
 sFilter1st Filt_freq_Vdc = FILTER_DEFAULTS_1_HZ;
+sFilter1st Filt_freq_Q = FILTER_DEFAULTS_1_HZ;
 
 typedef struct{
 float x;
@@ -850,9 +851,10 @@ interrupt void adcb1_isr(void)
        {
            flag.data_logo_init = 1;
 
-           if(resultsIndex2 < 1000) Q_ref = 3000;
-           else if(resultsIndex2 >= 1000 && resultsIndex2 < 1800) Q_ref = 1500;
-           else if(resultsIndex2 >= 1800) Q_ref = 0;
+//           if(resultsIndex2 < 500) Q_ref = 0;
+//           else if(resultsIndex2 >= 500) Q_ref = 3000;
+//           else if(resultsIndex2 >= 1000 && resultsIndex2 < 1800) Q_ref = 3000;
+//           else if(resultsIndex2 >= 1800) Q_ref = 0;
 //           Counts.count11++;
 
            if(resultsIndex2 > (N_data_log - 1))
@@ -867,13 +869,16 @@ interrupt void adcb1_isr(void)
        if(flag.data_logo_init == 1)
          {
              Counts.count9++;
+
              if(Counts.count9 >= COUNT_LIM_LOG)
              {
                  resultsIndex2++;
                  Counts.count9 = 0;
 
-                 aqui_sign1[resultsIndex2] = pi_Q.setpoint;
-                 aqui_sign2[resultsIndex2] = Qm;
+                 //aqui_sign1[resultsIndex2] = pi_Q.setpoint;
+                 //aqui_sign2[resultsIndex2] = Filt_freq_Q.Yn;
+                 aqui_sign1[resultsIndex2] = PR_Ia_fund.setpoint;
+                 aqui_sign2[resultsIndex2] = PR_Ia_fund.feedback;
              }
          }
 
@@ -941,8 +946,9 @@ interrupt void adcb1_isr(void)
        Qm = 1.224744871391589*pll_grid.beta*1.224744871391589*Ialfabeta.alfa - 1.224744871391589*pll_grid.alfa*1.224744871391589*Ialfabeta.beta;
 
        fil2nP.x = Pm;
-       fil2nQ.x = Qm;
-       TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
+       Filt_freq_Q.Un = Qm;
+       TUPA_First_order_signals_filter(&Filt_freq_Q);  //Filtragem do reativo medido
+//       TUPA_Second_order_filter(&fil2nQ);  //Filtragem do reativo medido
        TUPA_Second_order_filter(&fil2nP);  //Filtragem do ativo usado somente para aquisi��o por enquanto
 
        // Controle de Reativo
@@ -957,8 +963,8 @@ interrupt void adcb1_isr(void)
        //PR_Ia_fund.setpoint = Iref*pll_grid.costh;
        //PR_Ib_fund.setpoint = Iref*pll_grid.sinth;
 
-       Q_control = QRamp.y / 1.5;
-       //Q_control = (pi_Q.output + pi_Q.setpoint) / 1.5;
+       // Q_control = QRamp.y / 1.5;
+       Q_control = (pi_Q.output + pi_Q.setpoint) / 1.5;
 
        P_control =  -pi_Vdc.output / 1.5;
 
@@ -1624,6 +1630,10 @@ void TUPA_protect(void)
 
     //Verifica se a flag Group_com est� indicando que a prote��o foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
     if(flag.Com_DSP2_read == 1 && flag.AbleToStart == 1) flag.Shutdown = 1;
+
+    if(pll_grid.amplitude > 230 && flag.Inv_on) flag.Shutdown = 1;
+
+    if(pll_grid.amplitude < 120 && flag.Inv_on) flag.Shutdown = 1;
 
 
 }
