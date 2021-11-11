@@ -1667,6 +1667,9 @@ void TUPA_protect(void)
     //Verifica se a flag Group_com esta indicando que a protecao foi acionada no Conjunto 1. Se sim, aciona a flag Shutdown
     if(flag.Com_DSP2_read == 1 && flag.AbleToStart == 1) flag.Shutdown = 1;
 
+    if(pll_grid.amplitude > 230 && flag.Inv_on) flag.Shutdown = 1;
+
+    if(pll_grid.amplitude < 120 && flag.Inv_on) flag.Shutdown = 1;
 
 }
 
